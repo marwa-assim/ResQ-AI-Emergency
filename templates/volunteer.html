@@ -1,0 +1,600 @@
+﻿{% extends "layout.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1400px; position:relative; z-index:1;">
+    <!-- Background Particles -->
+    <canvas id="bg-canvas"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none;"></canvas>
+
+    <!-- Header -->
+    <header style="display: flex; justify-content: space-between; align-items: center; padding: 2rem 0;">
+        <div class="logo-container" style="display: flex; align-items: center; gap: 1rem; perspective: 1000px;">
+            <img src="/static/ResQ%20AI%20Logo.png" class="logo-3d"
+                style="height: 60px; filter: drop-shadow(0 0 10px rgba(6,182,212,0.5)); animation: logo3d 6s ease-in-out infinite;">
+            <div>
+                <h1
+                    style="margin: 0; font-size: 1.8rem; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                    ResQ Hero</h1>
+                <div style="font-size: 0.9rem; color: var(--accent-cyan); letter-spacing: 1px;">COMMUNITY FIRST RESPONSE
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Toggle -->
+        <div class="glass-panel"
+            style="padding: 0.5rem 1rem; border-radius: 50px; display: flex; align-items: center; gap: 1rem;">
+            <span id="status-text" style="font-weight: bold; color: #64748b;">OFF DUTY</span>
+            <label class="switch">
+                <input type="checkbox" id="duty-toggle" onchange="toggleDuty()">
+                <span class="slider round"></span>
+            </label>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div style="display: grid; grid-template-columns: 350px 1fr; gap: 2rem;">
+
+        <!-- Left: Profile & Stats -->
+        <div class="glass-panel" style="padding: 2rem; border-radius: 24px; height: fit-content;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div
+                    style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--accent-cyan); margin: 0 auto 1rem; overflow: hidden; position: relative;">
+                    <img src="https://ui-avatars.com/api/?name=Volunteer+Hero&background=0f172a&color=06b6d4"
+                        style="width:100%; height:100%; object-fit: cover;">
+                    <div
+                        style="position: absolute; bottom: 0; width: 100%; background: var(--accent-cyan); color: black; font-size: 0.7rem; font-weight: bold;">
+                        LVL 5</div>
+                </div>
+                <h2 style="margin: 0; color: white;">Sarah Connor</h2>
+                <div style="color: #94a3b8; font-size: 0.9rem;">BLS Certified • EMT-B</div>
+            </div>
+
+            <!-- Stats -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                <div class="stat-box">
+                    <div class="stat-val">12</div>
+                    <div class="stat-label">Responded</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val" style="color: var(--risk-low);">3</div>
+                    <div class="stat-label">Lives Saved</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">4m</div>
+                    <div class="stat-label">Avg Resp.</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">98%</div>
+                    <div class="stat-label">Rating</div>
+                </div>
+            </div>
+
+            <!-- Certifications -->
+            <h3
+                style="font-size: 1rem; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
+                CERTIFICATIONS</h3>
+            <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                <span class="cert-badge"><i class="fa-solid fa-heart-pulse"></i> CPR</span>
+                <span class="cert-badge"><i class="fa-solid fa-droplet"></i> Stop Bleed</span>
+                <span class="cert-badge"><i class="fa-solid fa-child"></i> Pediatric</span>
+            </div>
+        </div>
+
+        <!-- Right: Map & Active Mission -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <!-- Map Container -->
+            <div class="glass-panel"
+                style="padding: 0; border-radius: 24px; overflow: hidden; height: 500px; position: relative;">
+                <div id="map-overlay"
+                    style="position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(15,23,42,0.9); padding: 10px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <div class="pulse-dot"></div>
+                        <span style="color: white; font-weight: bold; font-size: 0.9rem;">SCANNING AREA...</span>
+                    </div>
+                </div>
+                <!-- Google Maps Embed (Dark Mode Simulated) -->
+                <iframe width="100%" height="100%" style="border:0" loading="lazy" allowfullscreen
+                    src="https://maps.google.com/maps?q=Bahrain&t=&z=14&ie=UTF8&iwloc=&output=embed">
+                </iframe>
+            </div>
+
+            <!-- Active Mission Card (Hidden initially) -->
+            <div id="mission-card" class="glass-panel"
+                style="display: none; padding: 2rem; border-radius: 24px; border-color: var(--risk-critical) !important; animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="badge-critical">CRITICAL ALERT</div>
+                        <h2 style="font-size: 2rem; color: white; margin: 0.5rem 0;">CARDIAC ARREST</h2>
+                        <div style="color: #cbd5e1; font-size: 1.1rem;"><i class="fa-solid fa-location-dot"></i> 450m
+                            away • King Fahd Road</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 3rem; font-weight: 800; color: var(--risk-critical);">02:30</div>
+                        <div style="color: #94a3b8;">Est. Arrival</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
+                    <button onclick="acceptMission()" class="modern-btn"
+                        style="background: var(--risk-low); border-color: var(--risk-low); justify-content: center; font-size: 1.2rem; padding: 1rem;">
+                        <i class="fa-solid fa-check-circle"></i> I'M RESPONDING
+                    </button>
+                    <button onclick="declineMission()" class="modern-btn"
+                        style="background: transparent; border-color: #64748b; color: #94a3b8; justify-content: center; font-size: 1.2rem; padding: 1rem;">
+                        DECLINE
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Alert Modal (Popup for new requests) -->
+<div id="alert-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(10px);">
+    <div class="glass-panel"
+        style="width: 500px; padding: 3rem; text-align: center; border-radius: 32px; border: 2px solid var(--risk-critical); box-shadow: 0 0 100px rgba(239, 68, 68, 0.4); animation: pulseAlert 1s infinite;">
+        <div
+            style="width: 100px; height: 100px; background: var(--risk-critical); border-radius: 50%; margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white;">
+            <i class="fa-solid fa-heart-crack fa-beat"></i>
+        </div>
+        <h1 style="color: white; font-size: 2.5rem; margin-bottom: 0.5rem;">CPR NEEDED</h1>
+        <p style="color: #cbd5e1; font-size: 1.4rem; margin-bottom: 2rem;">Nearby Emergency Detected</p>
+
+        <div
+            style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-bottom: 2rem; text-align: left;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #94a3b8;">Distance</span>
+                <span style="color: white; font-weight: bold;">0.4 km</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #94a3b8;">Incident</span>
+                <span style="color: white; font-weight: bold;">Unconscious Male (50s)</span>
+            </div>
+        </div>
+
+        <button onclick="confirmResponse()" class="modern-btn"
+            style="width: 100%; background: var(--risk-critical); border: none; font-size: 1.5rem; padding: 1.5rem; justify-content: center;">
+            ACCEPT & NAVIGATE
+        </button>
+        <button onclick="closeAlert()"
+            style="background: none; border: none; color: #64748b; margin-top: 1rem; cursor: pointer; font-size: 1rem; width:100%;">Ignore
+            (I'm busy)</button>
+    </div>
+</div>
+
+<style>
+    /* Custom Styles for Volunteer Portal */
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(6, 182, 212, 0.3);
+        box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+    }
+
+    .stat-box {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-val {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: white;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        margin-top: 0.2rem;
+    }
+
+    .cert-badge {
+        background: rgba(6, 182, 212, 0.1);
+        color: var(--accent-cyan);
+        border: 1px solid var(--accent-cyan);
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    /* Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #334155;
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked+.slider {
+        background-color: var(--risk-low);
+    }
+
+    input:checked+.slider:before {
+        transform: translateX(26px);
+    }
+
+    .pulse-dot {
+        width: 10px;
+        height: 10px;
+        background: var(--risk-low);
+        border-radius: 50%;
+        box-shadow: 0 0 0 rgba(34, 197, 94, 0.4);
+        animation: pulseGreen 2s infinite;
+    }
+
+    @keyframes pulseGreen {
+        0% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+    }
+
+    @keyframes pulseAlert {
+        0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        50% {
+            box-shadow: 0 0 50px 20px rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 1);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+    }
+
+    @keyframes logo3d {
+        0% {
+            transform: rotateY(-15deg) translateY(0);
+        }
+
+        50% {
+            transform: rotateY(15deg) translateY(-5px);
+        }
+
+        100% {
+            transform: rotateY(-15deg) translateY(0);
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modern-btn {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-family: 'Outfit', sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+    }
+
+    .modern-btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.2);
+    }
+
+    .badge-critical {
+        background: var(--risk-critical);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 0.8rem;
+        display: inline-block;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    let onDuty = false;
+    let pollInterval = null;
+    let currentAlert = null;
+    let alertSoundPlayed = false;   // play sound only once per alert
+    let acknowledgedAlertId = null; // ignore already-seen alert IDs
+    let missionActive = false;      // true after volunteer accepts
+
+    // 1. PARTICLES (Reused)
+    const canvas = document.getElementById('bg-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        const particleCount = 40;
+
+        function resize() { width = window.innerWidth; height = window.innerHeight; canvas.width = width; canvas.height = height; }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = (Math.random() - 0.5) * 0.3; this.size = Math.random() * 2 + 1; }
+            update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > width) this.vx *= -1; if (this.y < 0 || this.y > height) this.vy *= -1; }
+            draw() { ctx.fillStyle = 'rgba(6, 182, 212, 0.3)'; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+        }
+        for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height); ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)'; ctx.lineWidth = 1;
+            for (let i = 0; i < particles.length; i++) {
+                let p1 = particles[i]; p1.update(); p1.draw();
+                for (let j = i + 1; j < particles.length; j++) {
+                    let p2 = particles[j];
+                    let dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+                    if (dist < 120) { ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    // 2. LOGIC
+    async function toggleDuty() {
+        onDuty = document.getElementById('duty-toggle').checked;
+        const statusText = document.getElementById('status-text');
+
+        if (onDuty) {
+            statusText.innerText = "ON DUTY (SCANNING)";
+            statusText.style.color = "var(--risk-low)";
+            
+            // Get REAL Location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    try {
+                        await axios.post('/api/volunteer/status', { status: 'active', lat: lat, lng: lng });
+                        pollForAlerts();
+                    } catch (e) {
+                        console.error("Server Error", e);
+                        alert("Could not connect to ResQ Network");
+                        document.getElementById('duty-toggle').checked = false;
+                    }
+                }, (error) => {
+                    alert("Location access needed for Volunteer Mode.");
+                    document.getElementById('duty-toggle').checked = false;
+                });
+            } else {
+                 alert("Geolocation is not supported by this browser.");
+                 document.getElementById('duty-toggle').checked = false;
+            }
+        } else {
+            statusText.innerText = "OFF DUTY";
+            statusText.style.color = "#64748b";
+            await axios.post('/api/volunteer/status', { status: 'offline' });
+            stopPolling();
+        }
+    }
+
+    function pollForAlerts() {
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(async () => {
+            if (missionActive) return; // stop processing if already on a mission
+            try {
+                const res = await axios.get('/api/volunteer/check_alerts');
+                const alert = res.data.alert;
+                if (alert) {
+                    // Ignore if we already acknowledged this exact alert
+                    const alertId = alert.id || alert.sos_id || (alert.lat + ',' + alert.lng);
+                    if (alertId === acknowledgedAlertId) return;
+                    showAlert(alert, alertId);
+                }
+            } catch (e) { console.log("Polling...", e); }
+        }, 4000);
+    }
+
+    function stopPolling() {
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = null;
+    }
+
+    function showAlert(alertData, alertId) {
+        const modal = document.getElementById('alert-modal');
+        if (modal.style.display === 'flex') return; // already shown
+
+        currentAlert = alertData;
+        acknowledgedAlertId = alertId; // mark as seen immediately
+
+        // Update modal text dynamically from server data
+        const h1 = document.querySelector('#alert-modal h1');
+        if (h1) h1.innerText = alertData.type || 'EMERGENCY';
+        const infoSpans = document.querySelectorAll('#alert-modal span');
+        if (infoSpans.length >= 4) {
+            infoSpans[1].innerText = alertData.distance || 'Nearby';
+            infoSpans[3].innerText = alertData.details || 'Emergency reported';
+        }
+
+        // Play alert sound ONCE only
+        if (!alertSoundPlayed) {
+            alertSoundPlayed = true;
+            new Audio('https://assets.mixkit.co/active_storage/sfx/995/995-preview.mp3')
+                .play().catch(e => console.log(e));
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function closeAlert() {
+        document.getElementById('alert-modal').style.display = 'none';
+        // Reset sound flag so next different alert can play
+        alertSoundPlayed = false;
+        acknowledgedAlertId = null;
+        currentAlert = null;
+    }
+
+    async function confirmResponse() {
+        // Stop alert loop immediately
+        missionActive = true;
+        stopPolling();
+        document.getElementById('alert-modal').style.display = 'none';
+
+        // Show Active Mission Card
+        const missionCard = document.getElementById('mission-card');
+        missionCard.style.display = 'block';
+        missionCard.style.animation = 'slideUp 0.5s cubic-bezier(0.4,0,0.2,1)';
+
+        // Update mission card title from real alert
+        const missionH2 = document.querySelector('#mission-card h2');
+        if (missionH2 && currentAlert) missionH2.innerText = currentAlert.type || 'EMERGENCY';
+
+        // Update map to patient real location
+        _updateMapToPatient();
+
+        // Get volunteer's current GPS for OSRM route calculation
+        if (currentAlert && currentAlert.lat && currentAlert.lng && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                    const routeRes = await axios.post('/api/route', {
+                        start_lat: pos.coords.latitude, start_lng: pos.coords.longitude,
+                        end_lat: currentAlert.lat, end_lng: currentAlert.lng
+                    });
+                    const route = routeRes.data;
+                    // Update ETA display
+                    const etaEl = document.querySelector('#mission-card div[style*="font-size: 3rem"]');
+                    if (etaEl) etaEl.textContent = `${route.duration_minutes}m`;
+                    // Update distance in location div
+                    const locDiv = document.querySelector('#mission-card div[style*="color: #cbd5e1"]');
+                    if (locDiv) {
+                        locDiv.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${route.distance_km} km via road &bull; ${currentAlert.distance || ''}`;
+                    }
+                    // Show turn-by-turn steps if available
+                    if (route.steps && route.steps.length) {
+                        let stepsHtml = route.steps.slice(0,4).map(s => `<li style="color:#94a3b8;font-size:0.8rem;margin:2px 0;">${s}</li>`).join('');
+                        const existing = document.getElementById('route-steps');
+                        if (existing) existing.innerHTML = `<ul style="padding-left:1.2rem;margin-top:0.5rem;">${stepsHtml}</ul>`;
+                        else {
+                            const div = document.createElement('div');
+                            div.id = 'route-steps';
+                            div.innerHTML = `<div style="color:#64748b;font-size:0.78rem;margin-top:0.8rem;font-weight:600;">TURN-BY-TURN</div><ul style="padding-left:1.2rem;margin-top:4px;">${stepsHtml}</ul>`;
+                            missionCard.appendChild(div);
+                        }
+                    }
+                } catch(e) { console.error('OSRM route failed', e); }
+            }, () => {});
+        }
+
+        // Tell server volunteer is responding
+        try {
+            await axios.post('/api/volunteer/respond', { response: 'accept' });
+        } catch (e) { console.error("Server notify failed", e); }
+
+        // Update status text
+        document.getElementById('status-text').innerText = 'EN ROUTE';
+        document.getElementById('status-text').style.color = '#f59e0b';
+    }
+
+
+    function _updateMapToPatient() {
+        if (currentAlert && currentAlert.lat && currentAlert.lng) {
+            const iframe = document.querySelector('iframe');
+            if (iframe) {
+                iframe.src = `https://maps.google.com/maps?q=${currentAlert.lat},${currentAlert.lng}&t=&z=17&ie=UTF8&iwloc=&output=embed`;
+            }
+            // Also update the distance/address text
+            const locDiv = document.querySelector('#mission-card div[style*="color: #cbd5e1"]');
+            if (locDiv) {
+                locDiv.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${currentAlert.distance || 'Nearby'} &bull; Lat: ${parseFloat(currentAlert.lat).toFixed(4)}, Lng: ${parseFloat(currentAlert.lng).toFixed(4)}`;
+            }
+        }
+    }
+
+    async function acceptMission() {
+        // This is the in-card "I'M RESPONDING" button (shown after confirmResponse)
+        const btn = document.querySelector('#mission-card button:first-of-type');
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-person-running"></i> EN ROUTE';
+            btn.style.background = '#f59e0b';
+            btn.onclick = null;
+        }
+    }
+
+    async function declineMission() {
+        if (!confirm("Decline this mission request?")) return;
+
+        // Reset all state
+        missionActive = false;
+        alertSoundPlayed = false;
+        acknowledgedAlertId = null;
+        currentAlert = null;
+
+        document.getElementById('mission-card').style.display = 'none';
+        document.getElementById('status-text').innerText = 'ON DUTY (SCANNING)';
+        document.getElementById('status-text').style.color = 'var(--risk-low)';
+
+        // Reset map to general area
+        const iframe = document.querySelector('iframe');
+        if (iframe) iframe.src = "https://maps.google.com/maps?q=Bahrain&t=&z=14&ie=UTF8&iwloc=&output=embed";
+
+        // Tell server
+        try { await axios.post('/api/volunteer/respond', { response: 'decline' }); }
+        catch (e) { console.error(e); }
+
+        // Resume scanning for new alerts
+        pollForAlerts();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,6 @@
+   subject_id                            chiefcomplaint  acuity
+0    10000032                               Hypotension     2.0
+1    10000032            Abd pain, Abdominal distention     3.0
+2    10000032                           n/v/d, Abd pain     3.0
+3    10000032                      Abdominal distention     3.0
+4    10000032  Abdominal distention, Abd pain, LETHAGIC     2.0

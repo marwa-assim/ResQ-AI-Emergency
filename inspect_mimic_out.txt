@@ -1,0 +1,30 @@
+
+--- Inspecting Triage ---
+Columns: ['subject_id', 'stay_id', 'temperature', 'heartrate', 'resprate', 'o2sat', 'sbp', 'dbp', 'pain', 'acuity', 'chiefcomplaint']
+
+First 3 rows:
+   subject_id   stay_id  ...  acuity                  chiefcomplaint
+0    10000032  32952584  ...     2.0                     Hypotension
+1    10000032  33258284  ...     3.0  Abd pain, Abdominal distention
+2    10000032  35968195  ...     3.0                 n/v/d, Abd pain
+
+[3 rows x 11 columns]
+
+Acuity Distribution (Sample):
+acuity
+3.0    54
+2.0    39
+4.0     5
+1.0     2
+Name: count, dtype: int64
+
+--- Inspecting ED Stays ---
+Columns: ['subject_id', 'hadm_id', 'stay_id', 'intime', 'outtime', 'gender', 'race', 'arrival_transport', 'disposition']
+
+First 3 rows:
+   subject_id     hadm_id   stay_id  ...   race arrival_transport disposition
+0    10000032  22595853.0  33258284  ...  WHITE         AMBULANCE    ADMITTED
+1    10000032  22841357.0  38112554  ...  WHITE         AMBULANCE    ADMITTED
+2    10000032  25742920.0  35968195  ...  WHITE         AMBULANCE    ADMITTED
+
+[3 rows x 9 columns]

@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App\app.py", line 4, in <module>
+    from database import db
+  File "C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App\database.py", line 1, in <module>
+    from flask_sqlalchemy import SQLAlchemy
+ModuleNotFoundError: No module named 'flask_sqlalchemy'

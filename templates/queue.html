@@ -1,0 +1,46 @@
+﻿<style>
+.red { background-color:#ffcccc; }
+.orange { background-color:#ffe0b3; }
+.yellow { background-color:#ffffcc; }
+.green { background-color:#e6ffe6; }
+</style>
+
+<h2>ER Live Priority Queue</h2>
+
+<table border="1" cellpadding="8">
+<tr>
+<th>ID</th><th>Priority</th><th>Risk</th><th>HR</th><th>SpO₂</th><th>Temp</th><th>Details</th>
+</tr>
+
+{% for p in queue %}
+<tr class="
+{% if p.priority == 3 %}red
+{% elif p.priority == 2 %}orange
+{% elif p.priority == 1 %}yellow
+{% else %}green
+{% endif %}
+">
+<td>{{p.id}}</td>
+<td>
+{% if p.silent_risk %}
+<br><strong>⚠️ Silent Risk</strong>
+{% endif %}
+{% if p.priority == 3 %}🔴 RED
+{% elif p.priority == 2 %}🟠 ORANGE
+{% elif p.priority == 1 %}🟡 YELLOW
+{% else %}🟢 GREEN
+{% endif %}
+</td>
+<td>{{p.risk}}</td>
+<td>{{p.hr}}</td>
+<td>{{p.spo2}}</td>
+<td>{{p.temp}}</td>
+<td>
+  <a href="/patient/{{ p.id }}">View Details</a>
+</td>
+</tr>
+{% endfor %}
+</table>
+
+<a href="/">Add Another Patient</a>
+

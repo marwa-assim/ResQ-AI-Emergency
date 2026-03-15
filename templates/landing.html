@@ -1,0 +1,300 @@
+﻿{% extends "layout.html" %}
+
+{% block content %}
+<div
+    style="position: relative; min-height: 100vh; width: 100vw; overflow-y: auto; overflow-x: hidden; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);">
+
+    <!-- Canvas Background -->
+    <canvas id="bg-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></canvas>
+
+    <!-- Content Layer -->
+    <div class="container"
+        style="position: relative; z-index: 10; min-height: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 2rem; padding-bottom: 4rem;">
+        <div style="text-align: center; perspective: 1000px;">
+            <!-- Logo Only (No Text Title) -->
+            <img src="/static/ResQ%20AI%20Logo.png" alt="ResQ AI Logo"
+                style="height: 180px; width: auto; margin-bottom: 0.5rem; filter: drop-shadow(0 20px 50px rgba(6,182,212,0.6)); animation: logo3d 6s ease-in-out infinite;">
+
+            <p class="entrance-anim"
+                style="color: #94a3b8; margin-bottom: 3rem; font-size: 1.5rem; letter-spacing: 2px; animation-delay: 0.2s; text-transform: uppercase;">
+                Next-Gen Emergency Ecosystem
+            </p>
+
+            <style>
+                /* Strict Flex Layout (Robust) */
+                .landing-grid {
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                    gap: 50px;
+                    /* Explicit large gap */
+                    width: 100%;
+                    max-width: 1200px;
+                    margin: 50px auto;
+                    padding-bottom: 60px;
+                }
+
+                .grid-item-wrapper {
+                    flex: 0 0 auto;
+                    width: 300px;
+                    /* Fixed width */
+                    margin: 10px;
+                    /* Explicit margin around items */
+                    position: relative;
+                    opacity: 0;
+                    animation: fadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+                }
+
+                /* Ensure no overflow inside flex items */
+                .glass-card {
+                    width: 100%;
+                    min-height: 250px;
+                    box-sizing: border-box;
+                }
+            </style>
+
+            <div class="landing-grid">
+
+                <!-- Patient Portal (Mobile App) -->
+                <div class="grid-item-wrapper" style="animation-delay: 0.3s;">
+                    <a href="/patient" class="glass-card"
+                        style="animation: float 6s ease-in-out infinite 0s; border-color: #fca5a5;">
+                        <div class="icon-glow" style="color: #ef4444;"><i class="fa-solid fa-mobile-screen-button"></i>
+                        </div>
+                        <h3>Patient App</h3>
+                        <p>Usage: Emergency SOS</p>
+                    </a>
+                </div>
+
+                <!-- Kiosk -->
+                <div class="grid-item-wrapper" style="animation-delay: 0.4s;">
+                    <a href="/kiosk" class="glass-card" style="animation: float 6s ease-in-out infinite 0.5s;">
+                        <div class="icon-glow"><i class="fa-solid fa-user-injured"></i></div>
+                        <h3>Patient Kiosk</h3>
+                        <p>Self-service triage station</p>
+                    </a>
+                </div>
+
+                <!-- Dashboard -->
+                <div class="grid-item-wrapper" style="animation-delay: 0.5s;">
+                    <a href="/dashboard" class="glass-card" style="animation: float 7s ease-in-out infinite 1s;">
+                        <div class="icon-glow" style="color: var(--risk-high);"><i class="fa-solid fa-tv"></i></div>
+                        <h3>Live Dashboard</h3>
+                        <p>ER Command Center</p>
+                    </a>
+                </div>
+
+                <!-- Ambulance -->
+                <div class="grid-item-wrapper" style="animation-delay: 0.6s;">
+                    <a href="/ambulance" class="glass-card" style="animation: float 6.5s ease-in-out infinite 1.5s;">
+                        <div class="icon-glow" style="color: #22c55e;"><i class="fa-solid fa-truck-medical"></i></div>
+                        <h3>ResQ Pilot</h3>
+                        <p>Ambulance Interface</p>
+                    </a>
+                </div>
+
+                <!-- Volunteer -->
+                <div class="grid-item-wrapper" style="animation-delay: 0.7s;">
+                    <a href="/volunteer" class="glass-card"
+                        style="animation: float 5.5s ease-in-out infinite 2.0s; border-color: var(--accent-cyan);">
+                        <div class="icon-glow" style="color: #60a5fa;"><i class="fa-solid fa-hand-holding-heart"></i>
+                        </div>
+                        <h3>ResQ Hero</h3>
+                        <p>Volunteer Network</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Entrance Animations */
+    .entrance-anim {
+        opacity: 0;
+        animation: fadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    @keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-15px);
+        }
+    }
+
+    /* 3D Logo */
+    @keyframes logo3d {
+        0% {
+            transform: rotateY(-15deg) translateY(0);
+        }
+
+        50% {
+            transform: rotateY(15deg) translateY(-15px);
+        }
+
+        100% {
+            transform: rotateY(-15deg) translateY(0);
+        }
+    }
+
+    /* Glass Cards */
+    .glass-card {
+        text-decoration: none;
+        width: 100%;
+        /* Fill Grid Cell */
+        color: white;
+        background: rgba(30, 41, 59, 0.4);
+        /* Darker for contrast */
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(6, 182, 212, 0.3);
+        /* Cyan Tint Border */
+        border-radius: 20px;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 0 15px rgba(6, 182, 212, 0.1), inset 0 0 20px rgba(6, 182, 212, 0.05);
+        /* Baseline Glow */
+        position: relative;
+        overflow: hidden;
+    }
+
+    .glass-card:hover {
+        background: rgba(6, 182, 212, 0.15);
+        border-color: rgba(6, 182, 212, 0.8);
+        box-shadow: 0 0 30px rgba(6, 182, 212, 0.4), inset 0 0 10px rgba(6, 182, 212, 0.2);
+        transform: translateY(-10px) scale(1.02);
+    }
+
+    /* Optional: Animate the border glow */
+    .glass-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: 0.5s;
+    }
+
+    .glass-card:hover::before {
+        left: 100%;
+    }
+
+
+
+    .glass-card h3 {
+        margin: 1rem 0 0.5rem 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    .glass-card p {
+        font-size: 0.9rem;
+        color: #94a3b8;
+        margin: 0;
+    }
+
+    /* Icon Styling */
+    .icon-glow i {
+        font-size: 3.5rem;
+        transition: transform 0.4s;
+        color: var(--accent-cyan);
+    }
+
+    .glass-card:hover .icon-glow i {
+        transform: scale(1.2);
+        text-shadow: 0 0 20px currentColor;
+    }
+</style>
+
+<script>
+    // Particle Network Animation
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+
+    // Configuration
+    const particleCount = 80;
+    const connectionDistance = 150;
+    const particleSpeed = 0.5;
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            this.vx = (Math.random() - 0.5) * particleSpeed;
+            this.vy = (Math.random() - 0.5) * particleSpeed;
+            this.size = Math.random() * 2 + 1;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > width) this.vx *= -1;
+            if (this.y < 0 || this.y > height) this.vy *= -1;
+        }
+        draw() {
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.5)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw Connections
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < particles.length; i++) {
+            let p1 = particles[i];
+            p1.update();
+            p1.draw();
+            for (let j = i + 1; j < particles.length; j++) {
+                let p2 = particles[j];
+                let dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+                if (dist < connectionDistance) {
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+</script>
+{% endblock %}

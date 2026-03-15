@@ -1,0 +1,30 @@
+Sending POST to http://127.0.0.1:5000/api/triage with payload: {
+  "patient_id": "1001",
+  "name": "Sara Ahmed",
+  "age": 45,
+  "hr": 0,
+  "spo2": 0,
+  "temp": 0,
+  "sys_bp": 0,
+  "dia_bp": 0,
+  "chest_pain": false,
+  "breathing": false,
+  "bleeding": false,
+  "fainting": false,
+  "chronic": true,
+  "allergy": false
+}
+Status Code: 200
+Response Text: {
+  "patient": {
+    "id": "1001",
+    "name": "Ahmed",
+    "priority": 0,
+    "score": 0
+  },
+  "position": 1,
+  "queue_length": 1,
+  "risk_level": "Normal",
+  "status": "triaged"
+}
+

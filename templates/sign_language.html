@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResQ - Sign Language Triage</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #060d1a;
+            --surface: rgba(255,255,255,0.04);
+            --border: rgba(255,255,255,0.09);
+            --accent: #38bdf8;
+            --accent2: #818cf8;
+            --green: #34d399;
+            --red: #f87171;
+            --text: #f1f5f9;
+            --muted: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient grid */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ========================
+           STEP SYSTEM
+        ======================== */
+        .step { display: none; position: relative; z-index: 1; }
+        .step.active { display: flex; }
+
+        /* ========================
+           STEP 1 - WELCOME
+        ======================== */
+        #step-welcome {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .logo-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: rgba(56,189,248,0.1);
+            border: 1px solid rgba(56,189,248,0.25);
+            border-radius: 50px;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem; font-weight: 600; color: var(--accent);
+            letter-spacing: 0.08em; text-transform: uppercase;
+            margin-bottom: 1.5rem;
+        }
+
+        h1.hero {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 30%, var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1; margin-bottom: 1rem;
+        }
+
+        .hero-sub {
+            color: var(--muted); font-size: 1.1rem; max-width: 480px;
+            line-height: 1.6; margin-bottom: 2.5rem;
+        }
+
+        /* ASL Alphabet Reference Card */
+        .asl-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+            gap: 0.6rem;
+            max-width: 700px; width: 100%;
+            margin: 0 auto 2.5rem;
+        }
+
+        .asl-cell {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.6rem 0.4rem;
+            display: flex; flex-direction: column;
+            align-items: center; gap: 4px;
+            font-size: 0.68rem; color: var(--muted);
+            transition: all 0.2s;
+        }
+        .asl-cell:hover { border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.08); }
+        .asl-cell .letter { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+        .asl-cell .hint { font-size: 0.6rem; text-align: center; line-height: 1.3; color: var(--muted); }
+
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            background: linear-gradient(135deg, var(--accent), #0ea5e9);
+            color: #fff; border: none; border-radius: 50px;
+            padding: 0.9rem 2.5rem; font-size: 1.1rem; font-weight: 700;
+            cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 0 30px rgba(56,189,248,0.25);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 50px rgba(56,189,248,0.4);
+        }
+
+        .privacy-note {
+            margin-top: 1.5rem;
+            font-size: 0.78rem; color: var(--muted);
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+
+        /* ========================
+           STEP 2 - LIVE SIGNING
+        ======================== */
+        #step-sign {
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .sign-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem 1.5rem;
+            background: rgba(6,13,26,0.8); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 10;
+        }
+
+        .sign-header .brand { font-weight: 800; font-size: 1.1rem; color: var(--accent); }
+
+        .speak-override {
+            background: rgba(129,140,248,0.1);
+            border: 1px solid rgba(129,140,248,0.3);
+            color: var(--accent2); border-radius: 50px;
+            padding: 0.4rem 1rem; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; text-decoration: none;
+            transition: all 0.2s;
+        }
+        .speak-override:hover { background: rgba(129,140,248,0.2); }
+
+        .sign-body {
+            display: flex; flex: 1;
+            gap: 1rem; padding: 1rem;
+        }
+
+        /* Camera Area */
+        .camera-col {
+            flex: 0 0 auto;
+            display: flex; flex-direction: column; align-items: center; gap: 0.8rem;
+        }
+
+        #video-container {
+            position: relative;
+            width: min(540px, calc(100vw - 2rem));
+            aspect-ratio: 4/3;
+            border-radius: 18px; overflow: hidden;
+            border: 2px solid var(--border);
+            box-shadow: 0 0 0 1px rgba(56,189,248,0.1), 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .input_video {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; display: none;
+        }
+
+        .output_canvas {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror so it feels natural */
+        }
+
+        #loading-overlay {
+            position: absolute; inset: 0;
+            background: rgba(6,13,26,0.9);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 1rem;
+            z-index: 5; transition: opacity 0.5s;
+        }
+
+        .spinner {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(56,189,248,0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); }}
+
+        /* Detected Letter Overlay */
+        #detected-overlay {
+            position: absolute;
+            top: 12px; right: 12px;
+            width: 72px; height: 72px;
+            background: rgba(6,13,26,0.85);
+            border: 2px solid var(--accent);
+            border-radius: 16px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 6; transition: border-color 0.2s;
+        }
+
+        #detected-letter {
+            font-size: 2.8rem; font-weight: 900;
+            color: var(--accent); line-height: 1;
+            transition: all 0.15s;
+        }
+
+        #confidence-bar-wrap {
+            position: absolute;
+            bottom: 0; left: 0; right: 0; height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 0 0 14px 14px; overflow: hidden;
+        }
+
+        #confidence-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--green));
+            transition: width 0.1s;
+        }
+
+        /* Gesture Hint */
+        #gesture-hint {
+            position: absolute;
+            bottom: 12px; left: 12px; right: 12px;
+            background: rgba(6,13,26,0.75);
+            border-radius: 10px;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.72rem; color: var(--muted);
+            z-index: 6;
+            text-align: center;
+        }
+
+        /* RIGHT PANEL */
+        .control-col {
+            flex: 1; display: flex; flex-direction: column; gap: 0.8rem;
+            min-width: 0;
+        }
+
+        /* Word builder */
+        .word-builder-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px; padding: 1rem;
+        }
+
+        .wb-label {
+            font-size: 0.72rem; font-weight: 600; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.07em;
+            margin-bottom: 0.6rem;
+        }
+
+        #current-letter-display {
+            font-size: 1rem; color: var(--accent2); font-weight: 500;
+            min-height: 1.4rem; margin-bottom: 0.4rem;
+        }
+
+        #word-display {
+            font-size: 1.6rem; font-weight: 800; color: var(--text);
+            letter-spacing: 3px; word-break: break-all;
+            min-height: 2.2rem;
+        }
+
+        #message-display {
+            margin-top: 0.6rem;
+            font-size: 1rem; color: var(--muted);
+            min-height: 1.4rem; font-style: italic;
+            word-break: break-all;
+        }
+
+        .wb-controls {
+            display: flex; gap: 0.5rem; margin-top: 0.8rem; flex-wrap: wrap;
+        }
+
+        .btn-wb {
+            flex: 1; min-width: 80px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: var(--text); border-radius: 10px;
+            padding: 0.5rem; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-wb:hover { background: rgba(255,255,255,0.1); }
+        .btn-wb.danger { color: var(--red); border-color: rgba(248,113,113,0.3); }
+        .btn-wb.danger:hover { background: rgba(248,113,113,0.08); }
+
+        /* Quick Phrases */
+        .quick-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px; padding: 1rem;
+        }
+
+        .quick-label {
+            font-size: 0.72rem; font-weight: 600; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.07em;
+            margin-bottom: 0.8rem;
+        }
+
+        .quick-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .quick-btn {
+            background: rgba(56,189,248,0.07);
+            border: 1px solid rgba(56,189,248,0.15);
+            color: var(--accent); border-radius: 10px;
+            padding: 0.55rem 0.3rem; font-size: 0.78rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+            text-align: center; line-height: 1.3;
+        }
+        .quick-btn:hover {
+            background: rgba(56,189,248,0.18);
+            transform: translateY(-1px);
+        }
+        .quick-btn.red {
+            background: rgba(248,113,113,0.07);
+            border-color: rgba(248,113,113,0.2);
+            color: var(--red);
+        }
+        .quick-btn.red:hover { background: rgba(248,113,113,0.15); }
+
+        /* Send button */
+        .btn-send-big {
+            width: 100%; padding: 1rem;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            border: none; border-radius: 14px;
+            color: #fff; font-size: 1.1rem; font-weight: 700;
+            cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 0 30px rgba(56,189,248,0.2);
+            margin-top: auto;
+        }
+        .btn-send-big:hover {
+            box-shadow: 0 0 50px rgba(56,189,248,0.4);
+            transform: translateY(-2px);
+        }
+        .btn-send-big:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Mobile layout */
+        @media (max-width: 768px) {
+            .sign-body { flex-direction: column; }
+            .camera-col { width: 100%; }
+            .quick-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ========================
+           STEP 3 - REVIEW
+        ======================== */
+        #step-review {
+            flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 2rem; text-align: center;
+        }
+
+        .review-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px; padding: 2.5rem;
+            max-width: 560px; width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .review-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+        .review-card h2 {
+            font-size: 1.6rem; font-weight: 800; margin-bottom: 0.5rem;
+        }
+
+        .review-message {
+            background: rgba(56,189,248,0.06);
+            border: 1px solid rgba(56,189,248,0.15);
+            border-radius: 14px;
+            padding: 1.2rem; margin: 1.5rem 0;
+            font-size: 1.15rem; font-weight: 600;
+            color: var(--text); text-align: left;
+            word-break: break-word; line-height: 1.6;
+        }
+
+        .review-actions {
+            display: flex; gap: 0.8rem; flex-wrap: wrap;
+        }
+
+        .btn-ghost {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text); border-radius: 12px;
+            padding: 0.8rem; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.07); }
+
+        .btn-confirm {
+            flex: 2;
+            background: linear-gradient(135deg, #34d399, #10b981);
+            border: none; border-radius: 12px;
+            color: #fff; padding: 0.8rem;
+            font-size: 0.95rem; font-weight: 700;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .btn-confirm:hover { box-shadow: 0 0 30px rgba(52,211,153,0.4); transform: translateY(-2px); }
+
+        /* Sending state */
+        #sending-indicator {
+            display: none; flex-direction: column;
+            align-items: center; gap: 1rem; padding: 1.5rem 0;
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
+            background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.4);
+            color: var(--green); border-radius: 50px;
+            padding: 0.6rem 1.5rem; font-weight: 600; font-size: 0.9rem;
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            z-index: 100; pointer-events: none;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+
+    <!-- Google Translate -->
+    <script>
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'ar,en,fr,es,ur,hi,zh-CN,de,tr,ru,id,ms,fa,bn,pt',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+    <style>
+        #translate-bar {
+            position: fixed; top: 12px; right: 16px; z-index: 9100;
+            background: rgba(15,23,42,0.9); backdrop-filter: blur(14px);
+            border: 1px solid rgba(6,182,212,0.35); border-radius: 30px;
+            padding: 5px 14px; display: flex; align-items: center; gap: 8px;
+            font-family: 'Outfit', sans-serif; font-size: 0.8rem; color: #94a3b8;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        #translate-bar i { color: #06b6d4; font-size: 0.95rem; }
+        .goog-te-gadget-simple { background: transparent !important; border: none !important; font-size: 0.8rem !important; padding: 0 !important; }
+        .goog-te-gadget-simple .goog-te-menu-value span { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple a, .goog-te-gadget-simple a:visited { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple .goog-te-menu-value { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple img { display: none !important; }
+        .goog-te-banner-frame { display: none !important; }
+        body { top: 0 !important; }
+    </style>
+</head>
+<body>
+    <!-- Language Switcher -->
+    <div id="translate-bar">
+        <i class="fa-solid fa-language"></i>
+        <div id="google_translate_element"></div>
+    </div>
+
+<!-- ======================== STEP 1: WELCOME ======================== -->
+<section id="step-welcome" class="step active">
+    <a href="/patient" style="position:absolute;top:16px;left:16px;color:#64748b;text-decoration:none;font-size:0.85rem;display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(15,23,42,0.7);border:1px solid rgba(100,116,139,0.3);border-radius:20px;transition:all 0.2s;" onmouseover="this.style.color='#38bdf8';this.style.borderColor='#38bdf8'" onmouseout="this.style.color='#64748b';this.style.borderColor='rgba(100,116,139,0.3)'">
+        ← Back to Patient Portal
+    </a>
+    <div class="logo-badge">🤟 ResQ Sign Language Agent</div>
+    <h1 class="hero">Communicate Without<br>Saying a Word</h1>
+    <p class="hero-sub">
+        Use your hands to sign your symptoms using <strong>American Sign Language (A–Z)</strong>.
+        Our AI will read your signs in real-time and send them to the triage team.
+    </p>
+
+    <!-- ASL Reference Grid -->
+    <div class="asl-grid" id="asl-ref-grid"></div>
+
+    <button class="btn-primary" onclick="goToSign()">
+        📷 Start Signing
+    </button>
+
+    <p class="privacy-note">
+        🔒 Camera is processed on-device. Nothing is uploaded.
+    </p>
+</section>
+
+<!-- ======================== STEP 2: LIVE SIGNING ======================== -->
+<section id="step-sign" class="step">
+    <div class="sign-header">
+        <span class="brand">🤟 ResQ Sign Language</span>
+        <a href="/patient" class="speak-override">🎙 I can speak instead →</a>
+    </div>
+
+    <div class="sign-body">
+        <!-- Camera -->
+        <div class="camera-col">
+            <div id="video-container">
+                <video class="input_video"></video>
+                <canvas class="output_canvas" width="640" height="480"></canvas>
+
+                <div id="loading-overlay">
+                    <div class="spinner"></div>
+                    <div style="color: var(--accent); font-weight: 600; font-size: 0.9rem;">Initializing AI Hand Model…</div>
+                </div>
+
+                <div id="detected-overlay">
+                    <div id="detected-letter">-</div>
+                    <div id="confidence-bar-wrap">
+                        <div id="confidence-bar"></div>
+                    </div>
+                </div>
+
+                <div id="gesture-hint">Hold each letter gesture for ~0.5s to confirm it</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="control-col">
+            <!-- Word Builder -->
+            <div class="word-builder-section">
+                <div class="wb-label">Letter Builder</div>
+                <div id="current-letter-display">Detecting gesture…</div>
+                <div id="word-display">_</div>
+                <div id="message-display">&nbsp;</div>
+                <div class="wb-controls">
+                    <button class="btn-wb" onclick="addSpace()">Space</button>
+                    <button class="btn-wb danger" onclick="backspace()">⌫ Delete</button>
+                    <button class="btn-wb danger" onclick="clearAll()">✕ Clear</button>
+                </div>
+            </div>
+
+            <!-- Quick Phrases -->
+            <div class="quick-section">
+                <div class="quick-label">⚡ Quick Phrases - tap to add</div>
+                <div class="quick-grid">
+                    <button class="quick-btn red" onclick="quickPhrase('CHEST PAIN')">💔 Chest Pain</button>
+                    <button class="quick-btn red" onclick="quickPhrase('TROUBLE BREATHING')">😮‍💨 Breathing</button>
+                    <button class="quick-btn red" onclick="quickPhrase('BLEEDING')">🩸 Bleeding</button>
+                    <button class="quick-btn" onclick="quickPhrase('PAIN')">😣 Pain</button>
+                    <button class="quick-btn" onclick="quickPhrase('HELP')">🆘 Help</button>
+                    <button class="quick-btn" onclick="quickPhrase('DIZZY')">💫 Dizzy</button>
+                    <button class="quick-btn" onclick="quickPhrase('FEVER')">🌡️ Fever</button>
+                    <button class="quick-btn" onclick="quickPhrase('UNCONSCIOUS')">💤 Fainted</button>
+                    <button class="quick-btn" onclick="quickPhrase('ALLERGIC REACTION')">⚠️ Allergy</button>
+                </div>
+            </div>
+
+            <button class="btn-send-big" id="send-btn" onclick="goToReview()" disabled>
+                Review &amp; Send to Triage →
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- ======================== STEP 3: REVIEW ======================== -->
+<section id="step-review" class="step">
+    <div class="review-card">
+        <div class="review-icon">📋</div>
+        <h2>Review Your Message</h2>
+        <p style="color:var(--muted); font-size:0.9rem;">Is this what you wanted to say? Confirm to send it to the triage team.</p>
+
+        <div class="review-message" id="review-message-text"></div>
+
+        <div id="sending-indicator">
+            <div class="spinner"></div>
+            <div style="color:var(--accent); font-weight:600;">Sending to AI Triage…</div>
+        </div>
+
+        <div class="review-actions" id="review-actions">
+            <button class="btn-ghost" onclick="goBackToSign()">← Re-Sign</button>
+            <button class="btn-confirm" onclick="confirmAndSend()">✅ Confirm &amp; Send</button>
+        </div>
+    </div>
+</section>
+
+<div id="toast">✓ Sent to Triage Team!</div>
+
+<script>
+// ============================================================
+//  STEP NAVIGATION
+// ============================================================
+function goToStep(id) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+function goToSign() {
+    goToStep('step-sign');
+    initCamera();
+}
+
+function goToReview() {
+    const full = getFullMessage();
+    if (!full.trim()) { alert('Please sign or tap a quick phrase first.'); return; }
+    document.getElementById('review-message-text').textContent = full;
+    goToStep('step-review');
+    speak('Your message is: ' + full + '. Is this correct?');
+}
+
+function goBackToSign() {
+    goToStep('step-sign');
+}
+
+// ============================================================
+//  EMERGENCY GESTURE MODE (whole-word, no letter spelling)
+//  6 ASL-inspired emergency gestures each map to a command
+// ============================================================
+let emergencyModeActive = false;
+let emergencyGestureFrames = 0;
+let lastEmergencyGesture = '';
+const EMERGENCY_GESTURE_FRAMES = 18; // ~0.6s at 30fps
+
+const EMERGENCY_GESTURES = {
+  'HELP':     { icon: '🆘', color: '#ef4444', query: 'help',     desc: 'Open palm, all fingers up, wave' },
+  'CPR':      { icon: '💗', color: '#ec4899', query: 'cpr',      desc: 'Both fists, thumbs out (chest press)' },
+  'BLEEDING': { icon: '🩸', color: '#dc2626', query: 'bleeding', desc: 'Pinch index+thumb together' },
+  'CALL 911': { icon: '📞', color: '#06b6d4', query: 'call',     desc: 'Phone hand: pinky+thumb out' },
+  'PAIN':     { icon: '😣', color: '#f97316', query: 'pain',     desc: 'Point index finger at chest/self' },
+  'CHOKE':    { icon: '🤚', color: '#a855f7', query: 'choking',  desc: 'Hand at throat (universal choke sign)' },
+};
+
+/**
+ * Classifies emergency word-level gestures from MediaPipe landmarks.
+ * Returns gesture name or null.
+ * Landmark indices: 0=wrist, 4=thumb tip, 8=index tip, 12=middle tip, 16=ring tip, 20=pinky tip
+ *                  5=index MCP, 9=middle MCP, 13=ring MCP, 17=pinky MCP
+ *                  6=index PIP, 10=middle PIP, 14=ring PIP, 18=pinky PIP
+ */
+function classifyEmergencyGesture(lm) {
+    // Helper: is finger extended? (tip higher than MCP = smaller y)
+    const up = (tip, mcp) => lm[tip].y < lm[mcp].y - 0.04;
+    const thumbOut = lm[4].x < lm[3].x - 0.04; // left hand: thumb tip left of joint
+
+    const idxUp  = up(8, 5);
+    const midUp  = up(12, 9);
+    const rngUp  = up(16, 13);
+    const pnkUp  = up(20, 17);
+    const allUp  = idxUp && midUp && rngUp && pnkUp;
+    const allDwn = !idxUp && !midUp && !rngUp && !pnkUp;
+
+    // HELP — all 4 fingers up + thumb out (open palm)
+    if (allUp && thumbOut) return 'HELP';
+
+    // CPR — fist: all fingers down, thumb NOT out
+    if (allDwn && !thumbOut) return 'CPR';
+
+    // CALL 911 — pinky up + thumb out, others down (phone sign)
+    if (pnkUp && thumbOut && !idxUp && !midUp && !rngUp) return 'CALL 911';
+
+    // BLEEDING — only index up + middle up, ring/pinky down, thumb in (peace/scissors)
+    if (idxUp && midUp && !rngUp && !pnkUp && !thumbOut) return 'BLEEDING';
+
+    // PAIN — only index finger up (pointing), others down
+    if (idxUp && !midUp && !rngUp && !pnkUp) {
+        // Check pointing toward camera (index tip close to center x)
+        const cx = 0.5, tipX = lm[8].x;
+        if (Math.abs(tipX - cx) < 0.25) return 'PAIN';
+    }
+
+    // CHOKE — all fingers up but curled (tips below knuckles = hand at throat)
+    const idxCurl  = lm[8].y  > lm[6].y;
+    const midCurl  = lm[12].y > lm[10].y;
+    const rngCurl  = lm[16].y > lm[14].y;
+    const pnkCurl  = lm[20].y > lm[18].y;
+    if (idxCurl && midCurl && rngCurl && pnkCurl && thumbOut) return 'CHOKE';
+
+    return null;
+}
+
+function toggleEmergencyMode() {
+    emergencyModeActive = !emergencyModeActive;
+    const btn = document.getElementById('emergency-mode-btn');
+    const guide = document.getElementById('emergency-gesture-guide');
+    if (emergencyModeActive) {
+        btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        btn.textContent = '🆘 Emergency Gesture Mode: ON';
+        if (guide) guide.style.display = 'flex';
+        speak('Emergency gesture mode activated. Show: open palm for Help, fist for CPR, peace sign for Bleeding, phone hand for Call 911.');
+    } else {
+        btn.style.background = 'rgba(239,68,68,0.15)';
+        btn.textContent = '🆘 Activate Emergency Gesture Mode';
+        if (guide) guide.style.display = 'none';
+        speak('Emergency mode off. Use letter spelling for custom messages.');
+    }
+}
+
+// ============================================================
+//  ASL REFERENCE GRID (Step 1)
+// ============================================================
+const ASL_HINTS = {
+    A: 'Fist, thumb on side', B: 'Flat hand, thumb in',
+    C: 'Curved C shape',     D: 'Index up, others form O',
+    E: 'Bent fingers, thumb tucked', F: 'Index+thumb circle, others up',
+    G: 'Index points sideways, thumb out', H: 'Index+middle point sideways',
+    I: 'Pinky up',           J: 'Pinky traces J',
+    K: 'Index+middle up, thumb between', L: 'L-shape index+thumb',
+    M: 'Three fingers over thumb', N: 'Two fingers over thumb',
+    O: 'All fingers+thumb form O', P: 'K pointing down',
+    Q: 'G pointing down',    R: 'Index+middle crossed',
+    S: 'Fist, thumb over fingers', T: 'Fist, thumb between index+middle',
+    U: 'Index+middle up, together', V: 'Index+middle up, spread (V)',
+    W: 'Index+middle+ring up, spread', X: 'Index hook/bent',
+    Y: 'Thumb+pinky out',    Z: 'Index traces Z'
+};
+
+const grid = document.getElementById('asl-ref-grid');
+'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
+    const cell = document.createElement('div');
+    cell.className = 'asl-cell';
+    cell.innerHTML = `<span class="letter">${letter}</span><span class="hint">${ASL_HINTS[letter]}</span>`;
+    grid.appendChild(cell);
+});
+
+// ============================================================
+//  STATE
+// ============================================================
+let currentWord = '';
+let fullMessage = '';
+let cameraInited = false;
+let lastDetected = '';
+let framesHeld = 0;
+const REQUIRED_FRAMES = 18; // ~0.6s at 30fps
+
+function getFullMessage() {
+    const wordPart = currentWord.trim();
+    const msgPart  = fullMessage.trim();
+    if (msgPart && wordPart) return msgPart + ' ' + wordPart;
+    return (msgPart || wordPart || '').trim();
+}
+
+function updateDisplays() {
+    document.getElementById('word-display').textContent = currentWord || '_';
+    document.getElementById('message-display').textContent = fullMessage || '\u00a0';
+    document.getElementById('send-btn').disabled = !getFullMessage().trim();
+}
+
+function addLetter(letter) {
+    currentWord += letter;
+    updateDisplays();
+    speak(letter);
+    showToast(letter + ' added');
+}
+
+function addSpace() {
+    if (currentWord.trim()) {
+        fullMessage = (fullMessage + ' ' + currentWord).trim();
+        currentWord = '';
+        updateDisplays();
+    }
+}
+
+function backspace() {
+    if (currentWord.length > 0) {
+        currentWord = currentWord.slice(0, -1);
+    } else {
+        const parts = fullMessage.split(' ');
+        parts.pop();
+        fullMessage = parts.join(' ');
+    }
+    updateDisplays();
+}
+
+function clearAll() {
+    currentWord = ''; fullMessage = '';
+    updateDisplays();
+}
+
+function quickPhrase(phrase) {
+    if (fullMessage.trim()) fullMessage += ' ';
+    fullMessage += phrase;
+    currentWord = '';
+    updateDisplays();
+    speak(phrase);
+    showToast('"' + phrase + '" added');
+}
+
+// ============================================================
+//  REAL ASL A–Z CLASSIFIER
+//  Uses MediaPipe 21 hand landmarks:
+//    0=Wrist, 1-4=Thumb, 5-8=Index, 9-12=Middle, 13-16=Ring, 17-20=Pinky
+//  Curl: tip.y < pip.y means extended (up)
+//  Direction: tip.x - mcp.x for sideways
+// ============================================================
+function classifyASL(lm) {
+    // Helper: is finger extended? (tip above PIP in y - remember y increases downward)
+    const ext = {
+        thumb:  lm[4].x < lm[3].x,  // Thumb: tip further left than IP (for right hand mirrored)
+        index:  lm[8].y  < lm[6].y,
+        middle: lm[12].y < lm[10].y,
+        ring:   lm[16].y < lm[14].y,
+        pinky:  lm[20].y < lm[18].y,
+    };
+
+    // Curl degree (0=straight, 1=bent) using tip vs PIP
+    function curl(tip, pip) {
+        return lm[tip].y > lm[pip].y ? 1 : 0; // 1=curled
+    }
+
+    const iCurl  = curl(8, 6);
+    const mCurl  = curl(12, 10);
+    const rCurl  = curl(16, 14);
+    const pCurl  = curl(20, 18);
+
+    // Bent (partially curled - MCP vs PIP)
+    const iBent  = Math.abs(lm[8].y - lm[5].y) < 0.06;
+    const thumbOverFist = lm[4].y > lm[5].y && lm[4].x < lm[5].x;
+
+    const { index, middle, ring, pinky, thumb } = ext;
+
+    // --- Classic letter rules ---
+
+    // A - fist, thumb rests on side
+    if (!index && !middle && !ring && !pinky && !thumb) return 'A';
+
+    // S - fist, thumb over fingers
+    if (!index && !middle && !ring && !pinky && thumbOverFist) return 'S';
+
+    // E - fingers bent/curled, thumb tucked under
+    if (iCurl && mCurl && rCurl && pCurl) return 'E';
+
+    // B - flat hand, all 4 fingers up, thumb folded across
+    if (index && middle && ring && pinky && !thumb) return 'B';
+
+    // C - curved C, none fully extended, none fully curled
+    if (!index && !middle && !ring && !pinky) {
+        const indexCurve = Math.abs(lm[8].y - lm[5].y);
+        if (indexCurve > 0.05 && indexCurve < 0.15) return 'C';
+    }
+
+    // D - index up, others form O with thumb
+    if (index && !middle && !ring && !pinky) {
+        const distThumbMiddle = Math.hypot(lm[4].x - lm[12].x, lm[4].y - lm[12].y);
+        if (distThumbMiddle < 0.08) return 'D';
+    }
+
+    // F - index+thumb circle, middle+ring+pinky up
+    if (!index && middle && ring && pinky) {
+        const distThumbIndex = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+        if (distThumbIndex < 0.07) return 'F';
+    }
+
+    // G - index points sideways, thumb points same
+    if (index && !middle && !ring && !pinky) {
+        const sideways = Math.abs(lm[8].x - lm[5].x) > 0.1;
+        if (sideways) return 'G';
+    }
+
+    // H - index + middle pointing sideways (horizontal pair)
+    if (index && middle && !ring && !pinky) {
+        const sidewaysI = Math.abs(lm[8].x - lm[5].x) > 0.08;
+        const sidewaysM = Math.abs(lm[12].x - lm[9].x) > 0.08;
+        if (sidewaysI && sidewaysM) return 'H';
+    }
+
+    // I - pinky only up
+    if (!index && !middle && !ring && pinky) return 'I';
+
+    // K - index + middle up, thumb between them (up)
+    if (index && middle && !ring && !pinky) {
+        if (lm[4].y < lm[6].y) return 'K';
+    }
+
+    // L - L shape: index + thumb out
+    if (index && thumb && !middle && !ring && !pinky) return 'L';
+
+    // M - three fingers (index+middle+ring) bent over thumb
+    if (!index && !middle && !ring && !pinky) return 'M'; // covered by A/S generally - use thumb diff
+    // (A = no thumb over, M = three fingers folded down over thumb)
+
+    // N - index+middle over thumb
+    // (hard to distinguish from M via geometry alone - use index+middle slightly bent)
+    if (iCurl && mCurl && !rCurl && !pCurl && !thumb) return 'N';
+
+    // O - all fingers + thumb form circle
+    if (!index && !middle && !ring && !pinky && thumb) {
+        const distThumbIndex = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+        if (distThumbIndex < 0.1) return 'O';
+    }
+
+    // R - index + middle crossed (close together and up)
+    if (index && middle && !ring && !pinky) {
+        const spread = Math.abs(lm[8].x - lm[12].x);
+        if (spread < 0.04) return 'R';
+    }
+
+    // T - fist, thumb between index and middle
+    if (!index && !middle && !ring && !pinky) {
+        if (lm[4].y < lm[8].y && lm[4].y > lm[5].y) return 'T';
+    }
+
+    // U - index + middle up, together
+    if (index && middle && !ring && !pinky) {
+        const spread = Math.abs(lm[8].x - lm[12].x);
+        if (spread < 0.06) return 'U';
+    }
+
+    // V - index + middle up, spread (V shape)
+    if (index && middle && !ring && !pinky) {
+        const spread = Math.abs(lm[8].x - lm[12].x);
+        if (spread >= 0.06) return 'V';
+    }
+
+    // W - index + middle + ring up, spread
+    if (index && middle && ring && !pinky) {
+        const spread = Math.abs(lm[8].x - lm[16].x);
+        if (spread > 0.1) return 'W';
+    }
+
+    // X - index bent/hook
+    if (!middle && !ring && !pinky) {
+        if (iBent) return 'X';
+    }
+
+    // Y - thumb + pinky extended
+    if (!index && !middle && !ring && pinky && thumb) return 'Y';
+
+    // P - like K but pointing down
+    if (index && middle && !ring && !pinky) return 'P'; // fallback
+
+    // Q - index + thumb down
+    if (!middle && !ring && !pinky && !index) return 'Q';
+
+    return null;
+}
+
+// ============================================================
+//  MEDIAPIPE + CAMERA
+// ============================================================
+function initCamera() {
+    if (cameraInited) return;
+    cameraInited = true;
+
+    const videoEl  = document.querySelector('.input_video');
+    const canvasEl = document.querySelector('.output_canvas');
+    const ctx      = canvasEl.getContext('2d');
+    const overlay  = document.getElementById('loading-overlay');
+    const detLetter = document.getElementById('detected-letter');
+    const confBar   = document.getElementById('confidence-bar');
+    const curLetterDisp = document.getElementById('current-letter-display');
+
+    const hands = new Hands({
+        locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+    });
+
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.6
+    });
+
+    hands.onResults(results => {
+        // Hide loading
+        if (overlay.style.display !== 'none') {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
+        }
+
+        ctx.save();
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const lm = results.multiHandLandmarks[0];
+
+            // Draw hand skeleton
+            drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: '#0ea5e9', lineWidth: 3 });
+            drawLandmarks(ctx, lm, { color: '#38bdf8', lineWidth: 1, radius: 4 });
+
+            // ── EMERGENCY GESTURE MODE: whole-word recognition ──
+            if (emergencyModeActive) {
+                const gesture = classifyEmergencyGesture(lm);
+                if (gesture) {
+                    const gInfo = EMERGENCY_GESTURES[gesture];
+                    detLetter.textContent = gInfo.icon;
+                    detLetter.style.fontSize = '2.5rem';
+                    curLetterDisp.textContent = `Gesture: ${gesture}`;
+
+                    if (gesture === lastEmergencyGesture) {
+                        emergencyGestureFrames++;
+                        const pct = Math.min((emergencyGestureFrames / EMERGENCY_GESTURE_FRAMES) * 100, 100);
+                        confBar.style.width = pct + '%';
+                        confBar.style.background = gInfo.color;
+
+                        if (emergencyGestureFrames >= EMERGENCY_GESTURE_FRAMES) {
+                            emergencyGestureFrames = 0;
+                            lastEmergencyGesture = '';
+                            // Trigger the emergency protocol!
+                            speak(gesture + ' detected!');
+                            // Store in fullMessage so review step picks it up
+                            fullMessage = gesture;
+                            currentWord = '';
+                            // Auto-advance to review
+                            goToReview();
+                        }
+                    } else {
+                        lastEmergencyGesture = gesture;
+                        emergencyGestureFrames = 0;
+                        confBar.style.width = '0%';
+                    }
+                } else {
+                    detLetter.textContent = '✋';
+                    detLetter.style.fontSize = '2rem';
+                    curLetterDisp.textContent = 'Show an emergency gesture...';
+                    lastEmergencyGesture = '';
+                    emergencyGestureFrames = 0;
+                    confBar.style.width = '0%';
+                }
+            } else {
+                // ── NORMAL MODE: letter-by-letter A-Z ──
+                detLetter.style.fontSize = '';
+                const letter = classifyASL(lm);
+
+                if (letter) {
+                    detLetter.textContent = letter;
+                    curLetterDisp.textContent = `Detecting: ${letter}`;
+
+                    if (letter === lastDetected) {
+                        framesHeld++;
+                        const pct = Math.min((framesHeld / REQUIRED_FRAMES) * 100, 100);
+                        confBar.style.width = pct + '%';
+
+                        if (framesHeld >= REQUIRED_FRAMES) {
+                            addLetter(letter);
+                            framesHeld = 0;
+                            lastDetected = '';
+                            setTimeout(() => {}, 300);
+                        }
+                    } else {
+                        lastDetected = letter;
+                        framesHeld = 0;
+                        confBar.style.width = '0%';
+                    }
+                } else {
+                    detLetter.textContent = '-';
+                    confBar.style.width = '0%';
+                    curLetterDisp.textContent = 'Detecting gesture…';
+                    lastDetected = '';
+                    framesHeld = 0;
+                }
+            }
+
+        } else {
+            detLetter.textContent = '-';
+            confBar.style.width = '0%';
+            curLetterDisp.textContent = 'No hand detected - show your hand to camera';
+            lastDetected = '';
+            framesHeld = 0;
+        }
+
+        ctx.restore();
+    });
+
+    const camera = new Camera(videoEl, {
+        onFrame: async () => { await hands.send({ image: videoEl }); },
+        width: 640, height: 480
+    });
+    camera.start();
+}
+
+// ============================================================
+//  CONFIRM & SEND
+// ============================================================
+async function confirmAndSend() {
+    const msg = getFullMessage().trim();
+    if (!msg) return;
+
+    document.getElementById('review-actions').style.display = 'none';
+    document.getElementById('sending-indicator').style.display = 'flex';
+
+    // Store for patient portal
+    localStorage.setItem('signLanguageInput', msg);
+
+    // Call AI Consult
+    try {
+        const resp = await fetch('/api/ai_consult', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: msg, source: 'sign_language' })
+        });
+        const data = await resp.json();
+        localStorage.setItem('aiConsultResult', JSON.stringify(data));
+    } catch (e) {
+        console.warn('AI consult failed, continuing anyway:', e);
+    }
+
+    showToast('✓ Sent to Triage Team!');
+
+    setTimeout(() => {
+        window.location.href = '/patient';
+    }, 1200);
+}
+
+// ============================================================
+//  TTS & TOAST
+// ============================================================
+const synth = window.speechSynthesis;
+function speak(text) {
+    if (!synth) return;
+    synth.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 1.1; utt.volume = 0.7;
+    synth.speak(utt);
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+updateDisplays();
+</script>
+</body>
+</html>
+
+

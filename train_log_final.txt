@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App\train_risk_model.py", line 3, in <module>
+    from sklearn.ensemble import RandomForestClassifier
+ModuleNotFoundError: No module named 'sklearn'

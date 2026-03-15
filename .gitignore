@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env_backup
+
+# Database (never commit the live DB)
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables (NEVER push API keys)
+.env
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+*.log.*
+
+# Uploads / user data
+static/uploads/
+instance/
+
+# Model files (large - use Git LFS or keep separate)
+*.pkl
+*.h5
+*.pt
+*.pth
+*.onnx
+model_weights/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Node (if any frontend tooling)
+node_modules/
+
+# Temp
+tmp/
+temp/
+*.tmp

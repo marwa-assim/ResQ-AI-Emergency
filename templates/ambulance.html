@@ -1,0 +1,900 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResQ Companion</title>
+    <!-- Google Fonts: Roboto for Material 3 -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        /* MATERIAL 3 THEME TOKENS */
+        :root {
+            --md-sys-color-primary: #a8c7fa;
+            --md-sys-color-on-primary: #062e6f;
+            --md-sys-color-primary-container: #0842a0;
+            --md-sys-color-on-primary-container: #d6e3ff;
+            --md-sys-color-background: #111318;
+            --md-sys-color-surface: #1e293b;
+            --md-sys-color-on-surface: #e2e2e6;
+            --md-sys-color-error: #ffb4ab;
+            --md-sys-color-outline: #8e9099;
+            --md-elevation-2: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--md-sys-color-background);
+            color: var(--md-sys-color-on-surface);
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* CENTERED CONTAINER (Not Full Width) */
+        .app-shell {
+            width: 100%;
+            max-width: 500px;
+            /* Mobile width */
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            background: var(--md-sys-color-surface);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            min-height: 100vh;
+            /* Make it look like an app */
+        }
+
+        /* HEADER */
+        .top-app-bar {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0b0f19;
+            border-bottom: 1px solid #333;
+        }
+
+        .status-chip {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* MAIN CONTENT */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        /* CARDS */
+        .card {
+            background: #2b3240;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--md-elevation-2);
+            border: 1px solid #374151;
+        }
+
+        .card-header {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        /* MAP CONTAINER */
+        .map-container {
+            height: 250px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #444;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* BUTTONS (Material 3 Style) */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 20px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-filled {
+            background: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+        }
+
+        .btn-tonal {
+            background: #334155;
+            color: #e2e2e6;
+        }
+
+        .btn-error {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: #000;
+        }
+
+        /* INPUTS */
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background: #111318;
+            border: 1px solid #475569;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: var(--md-sys-color-primary);
+            outline: none;
+        }
+
+        /* ALARM OVERLAY */
+        .alarm-curtain {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            animation: flash 1s infinite alternate;
+        }
+
+        @keyframes flash {
+            from {
+                box-shadow: inset 0 0 0 0 red;
+            }
+
+            to {
+                box-shadow: inset 0 0 50px 0 red;
+            }
+        }
+
+        /* FAB (Floating Action Button) for Map */
+        .fab {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: white;
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+        }
+    </style>
+
+    <!-- Google Translate -->
+    <script>
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'ar,en,fr,es,ur,hi,zh-CN,de,tr,ru,id,ms,fa,bn,pt',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+    <style>
+        #translate-bar {
+            position: fixed; top: 12px; right: 16px; z-index: 9100;
+            background: rgba(15,23,42,0.9); backdrop-filter: blur(14px);
+            border: 1px solid rgba(6,182,212,0.35); border-radius: 30px;
+            padding: 5px 14px; display: flex; align-items: center; gap: 8px;
+            font-family: 'Outfit', sans-serif; font-size: 0.8rem; color: #94a3b8;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        #translate-bar i { color: #06b6d4; font-size: 0.95rem; }
+        .goog-te-gadget-simple { background: transparent !important; border: none !important; font-size: 0.8rem !important; padding: 0 !important; }
+        .goog-te-gadget-simple .goog-te-menu-value span { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple a, .goog-te-gadget-simple a:visited { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple .goog-te-menu-value { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple img { display: none !important; }
+        .goog-te-banner-frame { display: none !important; }
+        body { top: 0 !important; }
+    </style>
+</head>
+<body>
+    <!-- Language Switcher -->
+    <div id="translate-bar">
+        <i class="fa-solid fa-language"></i>
+        <div id="google_translate_element"></div>
+    </div>
+
+    <!-- Background Particles -->
+    <canvas id="bg-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1;"></canvas>
+    
+    <div class="alarm-curtain" id="alarm-layer">
+        <i class="fa-solid fa-bell fa-shake" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
+        <h1 style="color:white; margin:0;">PRIORITY ALERT</h1>
+        <p style="color:#aaa;">DISPATCH REQUESTED</p>
+        <button class="btn btn-error" style="width:200px; border-radius:24px;" onclick="acceptAlarm()">ACCEPT</button>
+    </div>
+
+    <div class="app-shell">
+        <!-- HEADER -->
+        <div class="top-app-bar"
+            style="flex-direction:column; padding-bottom:1rem; height:auto; gap:10px; animation: slideDown 0.5s ease-out; background:rgba(15, 23, 42, 0.8); perspective: 1000px;">
+            <img src="/static/ResQ%20AI%20Logo.png"
+                style="width: 80%; max-width: 300px; height:auto; filter: drop-shadow(0 10px 20px rgba(6, 182, 212, 0.5)); animation: logo3d 6s ease-in-out infinite;">
+            <div style="text-align:center;">
+                <div
+                    style="font-weight: 800; font-size: 1.8rem; letter-spacing:1px; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                    ResQ Pilot</div>
+                <div style="font-size: 0.9rem; color: #64748b; margin-top:2px;">UNIT-42 • <span id="header-status"
+                        style="color:#22c55e">Online</span></div>
+            </div>
+            <div style="position:absolute; top:12px; right:12px;">
+                <div class="status-chip" id="v2x-chip"><i class="fa-solid fa-wifi"></i> 5G</div>
+            </div>
+        </div>
+
+        <style>
+            @keyframes slideDown {
+                from {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes floatLogo {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-3px); }
+            }
+            @keyframes logo3d {
+                0% { transform: rotateY(-15deg) translateY(0); }
+                50% { transform: rotateY(15deg) translateY(-10px); }
+                100% { transform: rotateY(-15deg) translateY(0); }
+            }
+
+            @keyframes floatCard { 0% { transform: translateY(0); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0); } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes glowPulse { 
+                0% { box-shadow: 0 0 10px rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.3); } 
+                50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.4); border-color: rgba(6, 182, 212, 0.8); } 
+                100% { box-shadow: 0 0 10px rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.3); } 
+            }
+
+            /* New Card Style */
+            .modern-card {
+                background: rgba(15, 23, 42, 0.6) !important; /* Semi-transparent */
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(6, 182, 212, 0.3) !important; /* Glowing Cyan Border */
+                border-radius: 16px;
+                padding: 1rem;
+                box-shadow: 0 0 15px rgba(6, 182, 212, 0.1), inset 0 0 20px rgba(6, 182, 212, 0.05); /* Glow */
+                animation: fadeIn 0.5s ease-out, floatCard 6s ease-in-out infinite, glowPulse 4s infinite; /* Added Pulse */
+                margin-bottom: 1rem;
+                transition: all 0.3s;
+            }
+            .modern-card:hover {
+                box-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+                border-color: rgba(6, 182, 212, 1) !important;
+            }
+            
+            /* Input Styles */
+            input, select, textarea {
+                background: rgba(30, 41, 59, 0.6) !important;
+                border: 1px solid rgba(255,255,255,0.2) !important;
+                color: white !important;
+                border-radius: 8px !important;
+                backdrop-filter: blur(4px);
+            }
+            input:focus, select:focus, textarea:focus {
+                border-color: var(--accent-cyan) !important;
+                box-shadow: 0 0 15px rgba(6, 182, 212, 0.4) !important;
+                outline: none;
+            }
+
+            .card { animation: fadeIn 0.6s ease-out; } /* Legacy fallback */
+            .delay-1 { animation-delay: 0.3s; }
+            .delay-2 { animation-delay: 0.6s; }
+            
+            .glow-active { animation: glowPulse 2s infinite !important; border: 2px solid var(--accent-cyan) !important; }
+
+            /* Status Box Style */
+            .status-box {
+                background: rgba(30, 41, 59, 0.4);
+                backdrop-filter: blur(8px);
+                padding: 12px;
+                border-radius: 12px;
+                border: 1px solid rgba(6, 182, 212, 0.2);
+                animation: glowPulse 5s infinite alternate;
+                transition: all 0.3s;
+            }
+            .status-box:hover {
+                background: rgba(30, 41, 59, 0.7);
+                border-color: rgba(6, 182, 212, 0.6);
+            }
+        </style>
+
+        <!-- CONTENT -->
+        <div class="content" id="main-content">
+
+            <!-- IDLE STANDBY DASHBOARD -->
+            <div id="idle-dashboard" style="display:flex; flex-direction:column; gap:16px; height:100%;">
+
+                <!-- Status Card -->
+                <div class="modern-card"
+                    style="display:flex; flex-direction:column; align-items:center; flex:1; justify-content:center; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);">
+                    <div class="radar-container"
+                        style="position:relative; width:150px; height:150px; display:flex; justify-content:center; align-items:center;">
+                        <div class="radar-pulse"></div>
+                        <i class="fa-solid fa-location-crosshairs"
+                            style="font-size:3rem; color:var(--md-sys-color-primary); z-index:2;"></i>
+                    </div>
+                    <h2 style="margin:20px 0 5px 0;">SYSTEM STANDBY</h2>
+                    <p style="color:#64748b; margin:0;">Scanning for Dispatch...</p>
+                </div>
+
+                <!-- Unit Info -->
+                <div class="modern-card delay-1">
+                    <div class="card-header"><i class="fa-solid fa-circle-info"
+                            style="color:#94a3b8; margin-right:8px;"></i> Unit Status</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="status-box">
+                            <div style="font-size:0.75rem; color:#94a3b8;">UNIT ID</div>
+                            <div style="font-weight:bold;">UNIT-42</div>
+                        </div>
+                        <div class="status-box delay-1">
+                            <div style="font-size:0.75rem; color:#94a3b8;">LOCATION</div>
+                            <div style="font-weight:bold;">BASE HQ</div>
+                        </div>
+                        <div class="status-box delay-2">
+                            <div style="font-size:0.75rem; color:#94a3b8;">CREW</div>
+                            <div style="font-weight:bold;">MEDIC-A</div>
+                        </div>
+                        <div class="status-box delay-1">
+                            <div style="font-size:0.75rem; color:#94a3b8;">SCRAMBLE</div>
+                            <div style="font-weight:bold; color:#4ade80;">READY</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <style>
+                .radar-pulse {
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(66, 133, 244, 0.1);
+                    border: 2px solid rgba(66, 133, 244, 0.5);
+                    border-radius: 50%;
+                    animation: radar 2s infinite;
+                }
+
+                @keyframes radar {
+                    0% {
+                        transform: scale(0.8);
+                        opacity: 0.8;
+                    }
+
+                    100% {
+                        transform: scale(1.5);
+                        opacity: 0;
+                    }
+                }
+            /* Float Animation */
+            @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0px); } }
+            .floating { animation: float 6s ease-in-out infinite; }
+            .floating-delay-1 { animation-delay: 0.5s; }
+            .floating-delay-2 { animation-delay: 1s; }
+        </style>
+    </div>
+</div>
+
+<script>
+    // ... (existing script start) ...
+    // Note: I am not replacing the whole script, just the style block end and checking if renderState needs updates.
+    // Actually, I need to update the innerHTML strings in renderState to use 'floating'.
+    // Since I can't do multiple separate replacements easily in one go for dynamic strings spread out, 
+    // I will use a larger replacement chunk for the renderState function or just the style block first?
+    // Wait, the tool allows replacing a block.
+    // I'll replace the style block to add the keyframes.
+    // AND I'll replace the renderState function (partially) to add classes.
+    // Let's do the style block first.
+    // Oh wait, replace_file_content is single contiguous block.
+    // I'll use multi_replace.
+    
+    // Changing plan to use multi_replace.
+</script>
+
+
+    <script>
+        const UNIT_ID = "UNIT-42";
+        let currentState = "IDLE";
+        let audioContext = null;
+        let currentMission = null;
+        let availableHospitals = [];
+
+        // --- REAL POLLING ---
+        // Poll every 2 seconds for new dispatch
+        setInterval(checkDispatch, 2000);
+
+        async function checkDispatch() {
+            if (currentState !== 'IDLE') return; // Only listen if Idle
+            try {
+                const res = await axios.get('/api/ambulance/check_dispatch');
+                if (res.data.dispatch) {
+                    console.log("Dispatch Received:", res.data.mission);
+                    showAlarm(res.data.mission);
+                }
+            } catch (e) { console.error("Polling error", e); }
+        }
+
+        function playAlarmSound() {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(440, audioContext.currentTime); // A4
+            osc.frequency.setValueAtTime(880, audioContext.currentTime + 0.5); // A5
+
+            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + 1);
+        }
+
+        function showAlarm(mission) {
+            if (currentState !== 'IDLE') return;
+            if (window.currentAlarmInterval) return; // Prevent overlapping alarms
+
+            currentMission = mission;
+            const txt = document.querySelector('#alarm-layer p');
+            if (txt && mission) txt.innerText = "LAT: " + mission.lat.toFixed(4) + " LNG: " + mission.lng.toFixed(4) + "\n" + (mission.symptoms || "EMERGENCY DISPATCH");
+            document.getElementById('alarm-layer').style.display = 'flex';
+
+            // Play Loop
+            window.currentAlarmInterval = setInterval(playAlarmSound, 1000);
+        }
+
+        function acceptAlarm() {
+            document.getElementById('alarm-layer').style.display = 'none';
+            if (window.currentAlarmInterval) {
+                clearInterval(window.currentAlarmInterval);
+                window.currentAlarmInterval = null;
+            }
+
+            currentState = "NAV_PATIENT";
+            synchStatus("RESPONDING", "En Route to Scene", "Target Location");
+            renderState();
+
+            // Real Production Ambulance Geolocation Tracking
+            if (navigator.geolocation) {
+                window.ambulanceGeoWatcher = navigator.geolocation.watchPosition(
+                    (position) => {
+                        if (currentState === 'NAV_PATIENT' || currentState === 'NAV_HOSPITAL') {
+                            synchLocation(position.coords.latitude, position.coords.longitude);
+                        }
+                    },
+                    (error) => console.warn("GPS Tracking Error:", error),
+                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+                );
+            } else {
+                console.error("Geolocation is not supported by this browser.");
+            }
+        }
+
+        async function synchLocation(lat, lng) {
+            try {
+                await axios.post('/api/ambulance/update', {
+                    id: currentMission.id,
+                    status: currentState === 'NAV_PATIENT' ? 'RESPONDING' : 'TRANSPORTING',
+                    lat: lat,
+                    lng: lng
+                });
+            } catch (e) { }
+        }
+
+        async function synchStatus(status, details, dest, hosp_id=null) {
+            try {
+                let payload = {
+                    id: currentMission.id,
+                    status: status,
+                    symptoms: details,
+                    destination: dest
+                };
+                if (hosp_id) payload.hospital_id = hosp_id;
+                
+                await axios.post('/api/ambulance/update', payload);
+            } catch (e) { console.error("Sync Error", e); }
+        }
+
+        // --- OSRM REAL ROAD ROUTING ---
+        async function fetchOsrmRoute(fromLat, fromLng, toLat, toLng) {
+            try {
+                const res = await axios.post('/api/route', {
+                    start_lat: fromLat, start_lng: fromLng,
+                    end_lat: toLat,   end_lng: toLng
+                });
+                return res.data; // { duration_minutes, distance_km, steps[] }
+            } catch(e) {
+                console.warn('OSRM unavailable, using estimate', e);
+                // Rough estimate fallback
+                const dlat = toLat - fromLat, dlng = toLng - fromLng;
+                const km = Math.sqrt(dlat*dlat + dlng*dlng) * 111;
+                return { duration_minutes: Math.max(1, Math.round(km/0.8)), distance_km: Math.round(km*10)/10, steps: [], source:'fallback' };
+            }
+        }
+
+        // --- RENDERER ---
+        async function renderState() {
+            const c = document.getElementById('main-content');
+            c.innerHTML = '';
+
+            if (currentState === 'NAV_PATIENT') {
+                c.innerHTML = `
+                    <div class="modern-card">
+                        <div class="card-header">🚑 Navigation — En Route to Patient</div>
+                        <div class="map-container">
+                            <iframe width="100%" height="100%" style="border:0" loading="lazy" allowfullscreen
+                                src="https://maps.google.com/maps?q=${currentMission.lat},${currentMission.lng}&t=&z=15&ie=UTF8&iwloc=&output=embed">
+                            </iframe>
+                            <div class="fab" onclick="window.open('https://maps.google.com/?q=${currentMission.lat},${currentMission.lng}', '_blank')">
+                                <i class="fa-solid fa-diamond-turn-right"></i>
+                            </div>
+                        </div>
+                        <div id="route-info" style="margin-top:12px;">
+                            <div style="color:#64748b;font-size:0.85rem;">Calculating route via OSRM...</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="stateArrivedScene()">
+                        <i class="fa-solid fa-location-dot"></i> Arrived at Scene
+                    </button>
+                `;
+                // Fetch real route async after render
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(async pos => {
+                        const route = await fetchOsrmRoute(pos.coords.latitude, pos.coords.longitude, currentMission.lat, currentMission.lng);
+                        const el = document.getElementById('route-info');
+                        if (el) {
+                            const stepsHtml = (route.steps||[]).slice(0,4).map(s=>`<li style="color:#94a3b8;font-size:0.78rem;margin:3px 0">${s}</li>`).join('');
+                            el.innerHTML = `
+                                <div style="display:flex;gap:16px;margin-bottom:8px;">
+                                    <div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:#4ade80">${route.duration_minutes}m</div><div style="font-size:0.7rem;color:#64748b">ETA</div></div>
+                                    <div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:#06b6d4">${route.distance_km}km</div><div style="font-size:0.7rem;color:#64748b">Via Road</div></div>
+                                </div>
+                                ${stepsHtml ? '<div style="font-size:0.75rem;color:#64748b;margin-bottom:4px;">TURN-BY-TURN</div><ul style="padding-left:1.2rem;margin:0;">' + stepsHtml + '</ul>' : ''}
+                            `;
+                        }
+                    }, () => {
+                        const el = document.getElementById('route-info');
+                        if (el) el.innerHTML = `<div style="color:#64748b;font-size:0.8rem;">Target: ${currentMission.lat.toFixed(4)}, ${currentMission.lng.toFixed(4)}</div>`;
+                    });
+                }
+            }
+            else if (currentState === 'ON_SCENE') {
+                let hospHtml = availableHospitals.map(h => `
+                    <button class="btn btn-tonal" style="justify-content:space-between; margin-bottom:8px;" onclick="selectHosp('${h.name}', ${h.id}, ${h.lat}, ${h.lng})">
+                        <span>${h.name}</span>
+                        <span style="color:#4ade80;">${h._eta ? h._eta + 'm · ' + h._dist + 'km' : 'ETA...'}</span>
+                    </button>
+                `).join('');
+
+                c.innerHTML = `
+                   <div class="modern-card">
+                        <div class="card-header">Patient Assessment</div>
+                        <p style="font-size:0.9rem; color:#aaa;">Stabilize patient and select destination.</p>
+                   </div>
+                   <div class="modern-card delay-1">
+                        <div class="card-header">Select Hospital</div>
+                        ${hospHtml}
+                   </div>
+                `;
+            }
+            else if (currentState === 'NAV_HOSPITAL') {
+                c.innerHTML = `
+                    <div class="modern-card">
+                        <div class="card-header">🏥 Navigation — En Route to ${currentMission.hospital_name}</div>
+                        <div class="map-container">
+                            <iframe width="100%" height="100%" style="border:0" loading="lazy" allowfullscreen
+                                src="https://maps.google.com/maps?q=${currentMission.hospital_lat},${currentMission.hospital_lng}&t=&z=14&ie=UTF8&iwloc=&output=embed">
+                            </iframe>
+                            <div class="fab" onclick="window.open('https://maps.google.com/?q=${currentMission.hospital_lat},${currentMission.hospital_lng}', '_blank')">
+                                <i class="fa-solid fa-diamond-turn-right"></i>
+                            </div>
+                        </div>
+                        <div id="hosp-route-info" style="margin-top:8px;">
+                            <div style="color:#64748b;font-size:0.85rem;">Calculating route to hospital...</div>
+                        </div>
+                        <button class="btn btn-tonal" style="margin-top:12px;" onclick="activateGreenWave(this)">
+                            <i class="fa-solid fa-traffic-light"></i> Activate Green Wave
+                        </button>
+                    </div>
+                    <button class="btn btn-filled" onclick="stateReporting()">
+                        <i class="fa-solid fa-file-medical"></i> Prepare Handoff Report
+                    </button>
+                `;
+                // Fetch OSRM route from patient scene → hospital
+                const route = await fetchOsrmRoute(currentMission.lat, currentMission.lng, currentMission.hospital_lat, currentMission.hospital_lng);
+                const el = document.getElementById('hosp-route-info');
+                if (el) {
+                    const stepsHtml = (route.steps||[]).slice(0,4).map(s=>`<li style="color:#94a3b8;font-size:0.78rem;margin:3px 0">${s}</li>`).join('');
+                    el.innerHTML = `
+                        <div style="display:flex;gap:16px;margin-bottom:8px;">
+                            <div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:#f59e0b">${route.duration_minutes}m</div><div style="font-size:0.7rem;color:#64748b">ETA to ER</div></div>
+                            <div style="text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:#06b6d4">${route.distance_km}km</div><div style="font-size:0.7rem;color:#64748b">Via Road</div></div>
+                        </div>
+                        ${stepsHtml ? '<div style="font-size:0.75rem;color:#64748b;margin-bottom:4px;">TURN-BY-TURN</div><ul style="padding-left:1.2rem;margin:0;">' + stepsHtml + '</ul>' : ''}
+                    `;
+                }
+            }
+            else if (currentState === 'REPORTING') {
+                c.innerHTML = `
+                    <div class="modern-card">
+                        <div class="card-header">Patient Vitals & Handoff</div>
+
+                        <label style="font-size:0.8rem; color:#aaa;">Patient Name</label>
+                        <input type="text" id="p-name" placeholder="Unknown">
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div>
+                                <label style="font-size:0.8rem; color:#aaa;">HR (bpm)</label>
+                                <input type="number" id="p-hr" value="95">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem; color:#aaa;">SpO2 (%)</label>
+                                <input type="number" id="p-spo2" value="96">
+                            </div>
+                        </div>
+
+                        <label style="font-size:0.8rem; color:#aaa;">Symptoms (Select all that apply)</label>
+                        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                            <label style="display:flex; align-items:center; gap:10px; background:#111318; padding:10px; border-radius:8px;">
+                                <input type="checkbox" name="sym" value="Chest Pain" style="width:20px; margin:0;"> Chest Pain
+                            </label>
+                            <label style="display:flex; align-items:center; gap:10px; background:#111318; padding:10px; border-radius:8px;">
+                                <input type="checkbox" name="sym" value="Shortness of Breath" style="width:20px; margin:0;"> Shortness of Breath
+                            </label>
+                            <label style="display:flex; align-items:center; gap:10px; background:#111318; padding:10px; border-radius:8px;">
+                                <input type="checkbox" name="sym" value="Severe Bleeding" style="width:20px; margin:0;"> Severe Bleeding
+                            </label>
+                             <label style="display:flex; align-items:center; gap:10px; background:#111318; padding:10px; border-radius:8px;">
+                                <input type="checkbox" name="sym" value="Unconscious" style="width:20px; margin:0;"> Unconscious
+                            </label>
+                        </div>
+
+                        <input type="text" id="p-other" placeholder="Other Notes...">
+
+                        <button class="btn btn-filled" onclick="transmitData()">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Transmit Data
+                        </button>
+                    </div>
+
+                    <div id="arrival-area" style="opacity:0.5; pointer-events:none;">
+                         <button class="btn btn-success" onclick="markArrived()">
+                             <i class="fa-solid fa-check-double"></i> Arrived at ER
+                         </button>
+                    </div>
+                `;
+            }
+            else if (currentState === 'COMPLETE') {
+                c.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:300px;">
+                        <i class="fa-solid fa-circle-check" style="font-size:3rem; color:#4ade80; margin-bottom:1rem;"></i>
+                        <h2 style="margin:0;">Mission Complete</h2>
+                        <p>Patient transferred to ER Queue.</p>
+                        <button class="btn btn-tonal" style="width:200px; margin-top:20px;" onclick="location.reload()">Reset</button>
+                    </div>
+                `;
+            }
+        }
+
+        // --- ACTIONS ---
+        async function stateArrivedScene() {
+            try {
+                const res = await axios.get('/api/hospitals');
+                availableHospitals = res.data;
+                // Pre-calculate real OSRM ETAs for each hospital from patient location
+                for (const h of availableHospitals) {
+                    try {
+                        const r = await fetchOsrmRoute(currentMission.lat, currentMission.lng, h.lat, h.lng);
+                        h._eta  = r.duration_minutes;
+                        h._dist = r.distance_km;
+                    } catch(e) { h._eta = '?'; h._dist = ''; }
+                }
+            } catch (e) {
+                console.error("Could not fetch hospitals:", e);
+                availableHospitals = [{id:1, name:"Salmaniya Medical", lat:26.2137, lng:50.5794, _eta:'~8', _dist:''}];
+            }
+            currentState = 'ON_SCENE';
+            synchStatus("ON_SCENE", "Treating Patient", "");
+            renderState();
+        }
+
+        function selectHosp(name, id, lat, lng) {
+            currentMission.hospital_name = name;
+            currentMission.hospital_id = id;
+            currentMission.hospital_lat = lat;
+            currentMission.hospital_lng = lng;
+            currentState = 'NAV_HOSPITAL';
+            synchStatus("TRANSPORTING", "En Route to ER", name, id);
+            renderState();
+        }
+
+        function activateGreenWave(btn) {
+            btn.style.background = '#22c55e'; // Green
+            btn.style.color = 'black';
+            btn.innerHTML = '<i class="fa-solid fa-wifi"></i> Green Wave Active';
+            document.getElementById('v2x-chip').style.background = '#22c55e';
+            document.getElementById('v2x-chip').style.color = '#000';
+            document.getElementById('v2x-chip').innerHTML = '<i class="fa-solid fa-wifi"></i> PRIORITY';
+        }
+
+        function stateReporting() {
+            currentState = 'REPORTING';
+            renderState();
+        }
+
+        async function transmitData() {
+            // Collect Checkboxes
+            const checkboxes = document.querySelectorAll('input[name="sym"]:checked');
+            let symptoms = Array.from(checkboxes).map(cb => cb.value);
+            const other = document.getElementById('p-other').value;
+            if (other) symptoms.push(other);
+
+            const p = {
+                id: document.getElementById('p-name').value || currentMission.id,
+                name: document.getElementById('p-name').value || "Trauma Patient",
+                vitals: { hr: document.getElementById('p-hr').value, spo2: document.getElementById('p-spo2').value },
+                symptoms: symptoms.join(", "), // Send as string for now, but backend will parse
+                checklist: symptoms, // Send array too
+                status: "HEADS UP"
+            };
+
+            try {
+                const button = document.querySelector('.btn-filled');
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+                
+                // Keep patient ID synced
+                p.id = currentMission.id;
+                await axios.post('/api/ambulance/new', p);
+
+                button.innerHTML = '<i class="fa-solid fa-check"></i> Sent';
+                button.disabled = true;
+
+                // Enable Arrival
+                const arr = document.getElementById('arrival-area');
+                arr.style.opacity = '1';
+                arr.style.pointerEvents = 'all';
+
+            } catch (e) { alert("Transmit Failed: " + e.message); }
+        }
+
+        async function markArrived() {
+            try {
+                if (window.ambulanceGeoWatcher) navigator.geolocation.clearWatch(window.ambulanceGeoWatcher);
+                await axios.post('/api/ambulance/arrive', { id: currentMission.id });
+                currentState = 'COMPLETE';
+                renderState();
+            } catch (e) { alert("Arrival Error: " + e.message); }
+        }
+
+    </script>
+    <script>
+        // Particle Network Animation
+        const canvas = document.getElementById('bg-canvas');
+        if(canvas) {
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            const particleCount = 60; // Slightly less for performance on mobile
+            const connectionDistance = 120;
+
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.size = Math.random() * 2 + 1;
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.x < 0 || this.x > width) this.vx *= -1;
+                    if (this.y < 0 || this.y > height) this.vy *= -1;
+                }
+                draw() {
+                    ctx.fillStyle = 'rgba(6, 182, 212, 0.4)'; // Cyan
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < particles.length; i++) {
+                    let p1 = particles[i];
+                    p1.update();
+                    p1.draw();
+                    for (let j = i + 1; j < particles.length; j++) {
+                        let p2 = particles[j];
+                        let dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+                        if (dist < connectionDistance) {
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+    </script>
+</body>
+
+</html>

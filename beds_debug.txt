@@ -1,0 +1,28 @@
+1. Creating Patient TEST-BED-1770582465...
+2. Assigning to Bed 1...
+Assignment Status: 404
+<!doctype html>
+<html lang=en>
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+
+3. Fetching /api/beds...
+
+--- BED 1 DATA ---
+{
+  "id": 1,
+  "label": "ER Room 1",
+  "patient": {
+    "arrival_time": 1770582179.7806895,
+    "id": "TEST-1770582179",
+    "name": "Test Patient",
+    "priority": 3
+  },
+  "staff": [
+    "Dr. Fatima",
+    "Nurse Mona"
+  ]
+}
+
+[FAIL] Bed 1 is not assigned to our patient.

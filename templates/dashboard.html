@@ -1,0 +1,1777 @@
+﻿{% extends "layout.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1400px; position:relative; z-index:1;">
+    <!-- Background Particles -->
+    <canvas id="bg-canvas"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none;"></canvas>
+    <!-- Ambulance Ticker -->
+    <div id="ambulance-ticker"
+        style="background: #331111; color: #ff9999; padding: 0.5rem; border-bottom: 1px solid #ff4444; font-family: monospace; overflow: hidden; white-space: nowrap; display: none;">
+        <span style="display: inline-block; animation: scroll-left 20s linear infinite;" id="ticker-content">
+            <!-- Content -->
+        </span>
+    </div>
+
+    <header
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-top: 1rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <div>
+                <h1 class="title-glow" style="display:flex; align-items:center; gap:20px; perspective: 1000px;">
+                    <img src="/static/ResQ%20AI%20Logo.png"
+                        style="height:80px; width:auto; filter: drop-shadow(0 0 5px rgba(6,182,212,0.5)); animation: logo3d 6s ease-in-out infinite;">
+                    <div>
+                        <div style="font-size: 2.2rem; line-height: 1;">ResQ AI</div>
+                        <div
+                            style="font-size: 0.9rem; color: var(--text-secondary); opacity: 0.8; font-weight: normal;">
+                            Command Center</div>
+                    </div>
+                </h1>
+                <style>
+                    @keyframes logo3d {
+                        0% {
+                            transform: rotateY(-15deg) translateY(0);
+                        }
+
+                        50% {
+                            transform: rotateY(15deg) translateY(-5px);
+                        }
+
+                        100% {
+                            transform: rotateY(-15deg) translateY(0);
+                        }
+                    }
+                </style>
+                <div id="clock" style="color: var(--text-secondary); font-family: monospace;">--:--:--</div>
+            </div>
+
+            <button onclick="openAnalytics()"
+                style="background: rgba(6, 182, 212, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-chart-pie"></i> Analytics
+            </button>
+        </div>
+
+        <div style="display: flex; gap: 3rem; align-items: center;">
+            <div style="text-align: right;">
+                <div style="font-size: 0.9rem; color: var(--text-secondary);">Waiting</div>
+                <div id="patient-count" style="font-size: 2rem; font-weight: bold; color: var(--risk-high);">0</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.9rem; color: var(--text-secondary);">Beds Free</div>
+                <div id="bed-free-count" style="font-size: 2rem; font-weight: bold; color: var(--risk-low);">6</div>
+            </div>
+            <button onclick="triggerChaos()"
+                style="background: var(--risk-critical); color: white; border: 2px solid white; font-weight: bold; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px;">
+                <i class="fa-solid fa-triangle-exclamation"></i> CHAOS
+            </button>
+        </div>
+
+        <button id="enable-audio" onclick="enableAudio()"
+            style="background: rgba(255,255,255,0.1); border:none; color:white; padding: 0.5rem; cursor: pointer;">
+            <i class="fa-solid fa-volume-high"></i>
+        </button>
+
+        <button id="cmd-btn" onclick="toggleCmd()" class="modern-btn"
+            style="background: rgba(59, 130, 246, 0.2) !important; border-color: var(--accent-cyan) !important;">
+            <i class="fa-solid fa-terminal"></i> <span>Command (CMD+K)</span>
+        </button>
+    </header>
+
+    <!-- Command Deck Layout: City Map (Top) + Ops (Bottom) -->
+    <!-- Removed fixed height calc(100vh) to allow natural page scrolling -->
+    <div class="command-deck" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
+
+        <!-- STRATEGIC VIEW: Smart City Map (Fixed Height 400px) -->
+        <div id="city-map-container"
+            style="height: 400px; background: #0f172a; border-radius: 12px; border: 1px solid #334155; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); flex-shrink: 0;">
+            <div style="position: absolute; top: 10px; left: 15px; z-index: 10; pointer-events: none;">
+                <h3
+                    style="margin:0; color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px;">
+                    Smart City Traffic Grid</h3>
+                <div style="font-size: 0.8rem; color: #475569;">Live Feeds: <span style="color: #22c55e;">ONLINE</span>
+                </div>
+            </div>
+
+            <!-- Canvas Engine -->
+            <canvas id="city-map" style="width: 100%; height: 100%; display: block;"></canvas>
+
+            <!-- DRONE FEED PIP -->
+            <div
+                style="position: absolute; top: 15px; right: 15px; width: 200px; height: 150px; border: 2px solid #0284c7; background: #000; border-radius: 4px; overflow: hidden; box-shadow: 0 0 15px rgba(2, 132, 199, 0.5);">
+                <canvas id="drone-cam" width="200" height="150" style="display: block;"></canvas>
+                <div
+                    style="position: absolute; top: 0; left: 0; width: 100%; background: rgba(2, 132, 199, 0.2); padding: 2px 5px; font-size: 10px; color: #fff; font-weight: bold;">
+                    SKY-LINK FEED
+                </div>
+            </div>
+
+            <!-- Overlay UI -->
+            <div style="position: absolute; bottom: 15px; right: 15px; display: flex; gap: 10px; align-items: center;">
+                <button onclick="cityMap.dispatchAmbulance()"
+                    style="background: var(--risk-critical); color: white; border: 1px solid white; padding: 5px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 10px var(--risk-critical);">
+                    <i class="fa-solid fa-truck-medical"></i> DISPATCH
+                </button>
+                <!-- Simulation features removed for production -->
+                <div
+                    style="background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; border: 1px solid #333; font-size: 0.8rem; color: #aaa;">
+                    <i class="fa-solid fa-car-side"></i> Traffic: 84%
+                </div>
+                <div
+                    style="background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; border: 1px solid #333; font-size: 0.8rem; color: #aaa;">
+                    <i class="fa-solid fa-stopwatch"></i> Delay: +2m
+                </div>
+            </div>
+        </div>
+
+        <!-- OPERATIONS VIEW: Queue & Beds (Natural Height) -->
+        <div class="ops-deck" style="display: flex; gap: 1rem; align-items: flex-start;">
+            <!-- Left: Waiting Queue -->
+            <div style="flex: 0.8; display: flex; flex-direction: column;">
+                <div class="column-header title-glow">Waiting Queue</div>
+                <div id="queue-container" class="scroll-area glass-panel"
+                    style="min-height: 300px; padding: 1rem; border-radius: 12px; margin-top:0.5rem;"
+                    ondragover="allowDrop(event)">
+                    <!-- Queue Items -->
+                </div>
+            </div>
+
+            <!-- Right: Bed Grid -->
+            <div style="flex: 1.2; display: flex; flex-direction: column;">
+                <div class="column-header title-glow">ER Treatment Area</div>
+                <div id="bed-container" class="bed-grid glass-panel"
+                    style="min-height: 300px; padding: 1rem; border-radius: 12px; margin-top:0.5rem;">
+                    <!-- Bed Items -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Modal -->
+<div id="analytics-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200;">
+    <div class="panel" style="width: 800px; margin: 5vh auto; border: 1px solid #555;">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="color: white;"><i class="fa-solid fa-user-doctor"></i> Chief of Medicine Dashboard</h2>
+            <button onclick="document.getElementById('analytics-modal').style.display='none'"
+                style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+            <div class="panel" style="text-align: center; background: rgba(255,255,255,0.05); padding: 1rem;">
+                <div style="font-size: 0.8rem; color: #aaa;">Total Entered</div>
+                <div id="stat-entered" style="font-size: 2rem; font-weight: bold; color: var(--accent-cyan);">0</div>
+            </div>
+            <div class="panel" style="text-align: center; background: rgba(255,255,255,0.05); padding: 1rem;">
+                <div style="font-size: 0.8rem; color: #aaa;">Discharged</div>
+                <div id="stat-discharged" style="font-size: 2rem; font-weight: bold; color: var(--risk-low);">0</div>
+            </div>
+            <div class="panel" style="text-align: center; background: rgba(255,255,255,0.05); padding: 1rem;">
+                <div style="font-size: 0.8rem; color: #aaa;">Remaining</div>
+                <div id="stat-remaining" style="font-size: 2rem; font-weight: bold; color: var(--risk-high);">0</div>
+            </div>
+            <div class="panel" style="text-align: center; background: rgba(255,255,255,0.05); padding: 1rem;">
+                <div style="font-size: 0.8rem; color: #aaa;">Avg Wait</div>
+                <div id="stat-wait" style="font-size: 2rem; font-weight: bold; color: white;">0s</div>
+            </div>
+        </div>
+
+        <div id="prediction-banner"
+            style="display: none; background: rgba(6, 182, 212, 0.1); border: 1px solid var(--accent-cyan); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--text-secondary);">15-Minute Saturation Forecast</div>
+            <div id="prediction-text" style="font-size: 1.5rem; font-weight: bold; color: var(--accent-cyan);">
+                CALCULATING TREND...</div>
+        </div>
+
+        <div style="height: 300px;">
+            <canvas id="triageChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- AI Copilot Modal -->
+<div id="copilot-modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100;">
+    <div class="panel"
+        style="width: 600px; margin: 5vh auto; border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px var(--accent-glow);">
+        <header
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 1rem;">
+            <h2 class="title-glow"><i class="fa-solid fa-brain"></i> AI Clinical Copilot</h2>
+            <button onclick="document.getElementById('copilot-modal').style.display='none'"
+                style="background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer;">&times;</button>
+        </header>
+
+        <div id="copilot-content">
+            <!-- Dynamic Content -->
+        </div>
+
+        <footer style="margin-top: 2rem; text-align: right;">
+            <button onclick="document.getElementById('copilot-modal').style.display='none'"
+                style="padding: 0.5rem 1.5rem; background: var(--accent-cyan); border: none; font-weight: bold; cursor: pointer;">Acknowledge</button>
+        </footer>
+    </div>
+</div>
+
+<audio id="alarm-sound" src="https://assets.mixkit.co/active_storage/sfx/995/995-preview.mp3" preload="auto"></audio>
+
+<!-- Command Panel (Hidden by default) -->
+<div id="cmd-panel"
+    style="display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(15, 23, 42, 0.98); border-top: 1px solid var(--accent-cyan); padding: 1.5rem; flex-direction: column; justify-content: center; align-items: center; z-index: 9000; box-shadow: 0 -5px 20px black;">
+
+    <!-- Macro Deck -->
+    <div id="macro-deck" style="display: flex; gap: 2rem; margin-bottom: 1.5rem; opacity: 1; transition: opacity 0.2s;">
+        <div class="macro-group">
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; text-align: center;">ACTION</div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="macro-btn action-key" onclick="setCmdAction('d')">Discharge</button>
+                <button class="macro-btn action-key" onclick="setCmdAction('n')">Note</button>
+                <button class="macro-btn action-key" onclick="setCmdAction('a')">Assign</button>
+            </div>
+        </div>
+        <div class="macro-group">
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; text-align: center;">TARGET BED</div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="macro-btn bed-key" onclick="appendCmdBed(1)">1</button>
+                <button class="macro-btn bed-key" onclick="appendCmdBed(2)">2</button>
+                <button class="macro-btn bed-key" onclick="appendCmdBed(3)">3</button>
+                <button class="macro-btn bed-key" onclick="appendCmdBed(4)">4</button>
+                <button class="macro-btn bed-key" onclick="appendCmdBed(5)">5</button>
+                <button class="macro-btn bed-key" onclick="appendCmdBed(6)">6</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Row -->
+    <div
+        style="width: 800px; max-width: 90%; display: flex; gap: 1rem; align-items: center; background: rgba(0,0,0,0.3); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #334155;">
+        <i class="fa-solid fa-terminal" style="font-size: 1.2rem; color: var(--accent-cyan);"></i>
+        <input type="text" id="cmd-input" placeholder="Type or Speak command..."
+            style="flex: 1; background: transparent; border: none; color: white; font-family: monospace; font-size: 1.3rem; outline: none;">
+
+        <button id="mic-trigger" onclick="recordCmd()"
+            style="background: none; border: none; color: #94a3b8; cursor: pointer; transition: color 0.2s;">
+            <i class="fa-solid fa-microphone"></i>
+        </button>
+
+        <div
+            style="font-family: monospace; color: #64748b; font-size: 0.8rem; border: 1px solid #475569; padding: 2px 6px; border-radius: 4px;">
+            ENTER
+        </div>
+    </div>
+</div>
+
+<style>
+    .macro-btn {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #cbd5e1;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        font-weight: bold;
+        transition: all 0.1s;
+    }
+
+    .macro-btn:hover {
+        background: #334155;
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .macro-btn:active {
+        transform: translateY(1px);
+    }
+
+    .action-key {
+        border-bottom: 2px solid var(--accent-cyan);
+    }
+
+    .bed-key {
+        border-bottom: 2px solid var(--risk-high);
+        min-width: 40px;
+    }
+
+    .macro-active {
+        background: var(--accent-cyan);
+        color: white;
+        border-color: var(--accent-cyan);
+    }
+
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6) !important;
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(6, 182, 212, 0.3) !important;
+        box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), inset 0 0 20px rgba(6, 182, 212, 0.05) !important;
+        animation: glowPulse 5s infinite alternate;
+        transition: all 0.3s;
+    }
+
+    .glass-panel:hover {
+        border-color: rgba(6, 182, 212, 0.6) !important;
+        box-shadow: 0 0 30px rgba(6, 182, 212, 0.2) !important;
+    }
+
+    .modern-btn {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .modern-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(6, 182, 212, 0.3);
+        border-color: var(--accent-cyan);
+        color: var(--accent-cyan);
+    }
+
+    @keyframes glowPulse {
+        0% {
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.1);
+            border-color: rgba(6, 182, 212, 0.2);
+        }
+
+        50% {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.3);
+            border-color: rgba(6, 182, 212, 0.6);
+        }
+
+        100% {
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.1);
+            border-color: rgba(6, 182, 212, 0.2);
+        }
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // -------------------------------------------------------------------------
+    // 1. Utilities (Clock, Audio, Shake)
+    // -------------------------------------------------------------------------
+    function updateClock() {
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+
+    function enableAudio() {
+        const audio = document.getElementById('alarm-sound');
+        // Pre-initialize buffer
+        audio.play().then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+        }).catch(e => console.log("Audio block:", e));
+        document.getElementById('enable-audio').style.display = 'none';
+        // Put "alarm ready" text
+    }
+
+    // Add Shake to CSS dynamically
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+    `;
+    document.head.appendChild(styleSheet);
+
+
+    // -------------------------------------------------------------------------
+    // 2. Global State
+    // -------------------------------------------------------------------------
+    let queueData = [];
+    let bedData = [];
+    let lastCriticalCount = 0;
+    let lastQueueCount = 0;
+
+    // -------------------------------------------------------------------------
+    // 3. Main Polling & Rendering
+    // -------------------------------------------------------------------------
+    async function refreshAll() {
+        try {
+            // Parallel Fetch
+            const [qRes, bRes] = await Promise.all([
+                axios.get('/api/queue'),
+                axios.get('/api/beds')
+            ]);
+
+            queueData = qRes.data;
+            bedData = bRes.data;
+
+            renderQueue();
+            renderBeds();
+
+        } catch (e) {
+            console.error("Refresh Failed", e);
+        }
+    }
+
+    function renderQueue() {
+        const doc = document.getElementById('queue-container');
+        document.getElementById('patient-count').innerText = queueData.length;
+
+        let html = '';
+        let critCount = 0;
+
+        if (queueData.length === 0) html = '<div style="text-align: center; color: grey; padding: 2rem;">No Waiting Patients</div>';
+
+        queueData.forEach(p => {
+            let pClass = `priority-${p.priority}`;
+
+            // STRICT Color Logic to match CSS
+            let riskColor = 'var(--text-primary)';
+            if (p.priority === 3) riskColor = 'var(--risk-critical)'; // Red
+            else if (p.priority === 2) riskColor = 'var(--risk-high)'; // Orange
+            else if (p.priority === 1) riskColor = 'var(--risk-moderate)'; // Yellow/Greenish
+            else riskColor = 'var(--risk-low)'; // Green
+
+            if (p.priority === 3) {
+                pClass += ' blinking-critical';
+                critCount++;
+            }
+
+            let silentWarning = p.silent_risk ? '<div style="color: #f97316; font-size: 0.8rem; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> SILENT HYPOXIA</div>' : '';
+
+            // Ambulance Badge
+            let sourceBadge = p.source === 'ambulance' ?
+                '<div style="background:var(--risk-critical); font-size:0.7rem; padding:0.2rem; border-radius:4px; margin-top:0.2rem; display:inline-block;"><i class="fa-solid fa-truck-medical"></i> AMBULANCE</div>' : '';
+
+            html += `
+                <div id="${p.id}" class="patient-card ${pClass}" draggable="true" ondragstart="drag(event)" onclick="openCopilot('${p.id}')">
+                    <div style="font-size: 1.5rem; font-weight: bold; text-align: center; color: ${riskColor}">${p.score}%</div>
+                    <div>
+                        <div style="font-weight: bold;">${p.name}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.7;">${p.age}y ${p.gender}</div>
+                        <div style="font-size: 0.75rem; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                            ${p.symptoms_text || "General Issue"}
+                        </div>
+                        ${sourceBadge}
+                        ${silentWarning}
+                    </div>
+                    <div style="font-size: 0.8rem;">
+                       <div><i class="fa-solid fa-heart-pulse"></i> ${p.vitals.hr} <i class="fa-solid fa-lungs"></i> ${p.vitals.spo2}%</div>
+                       <div>BP ${p.vitals.bp}</div>
+                    </div>
+                    <div><i class="fa-solid fa-grip-lines" style="cursor: grab; opacity: 0.5;"></i></div>
+                </div>
+             `;
+        });
+        doc.innerHTML = html;
+
+        // Critical Alarm (Emergency Siren)
+        if (critCount > lastCriticalCount) {
+            const audio = document.getElementById('alarm-sound');
+            audio.volume = 0.5;
+            audio.play().catch(() => { });
+        }
+        
+        // Standard Admission Sound (Chime)
+        if (queueData.length > lastQueueCount) {
+             const stdAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+             stdAudio.volume = 0.4;
+             stdAudio.play().catch(() => {});
+        }
+        
+        lastCriticalCount = critCount;
+        lastQueueCount = queueData.length;
+    }
+
+    function renderBeds() {
+        const doc = document.getElementById('bed-container');
+        let freeCount = 0;
+
+        let html = '';
+
+        bedData.forEach(b => {
+            if (!b.patient) {
+                freeCount++;
+                html += `
+                 <div class="bed-card" data-bed-id="${b.id}" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                     <div style="color: var(--risk-low); font-size: 2rem;"><i class="fa-solid fa-bed"></i></div>
+                     <h3>${b.label}</h3>
+                     <span style="color: var(--text-secondary); font-size: 0.8rem;">Empty</span>
+                 </div>
+                 `;
+            } else {
+                const p = b.patient;
+                const isCrit = p.priority >= 3 ? 'critical' : '';
+
+                let staffHtml = b.staff.map(s => `<div class="staff-avatar" title="${s}">${s.charAt(0)}</div>`).join('');
+
+                html += `
+                 <div class="bed-card occupied ${isCrit}" onclick="openCopilot('${p.id}', true)">
+                     <div class="ecg-container"><canvas id="ecg-${b.id}" class="ecg-canvas"></canvas></div>
+                     
+                     <div style="position: relative; z-index: 2;">
+                        <h3 style="margin: 0; color: var(--accent-cyan);">${b.label}</h3>
+                        <div style="font-weight: bold; font-size: 1.2rem; margin-top: 0.5rem;">${p.name}</div>
+                        <div style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 0.2rem;">${(p.symptoms_text || "").substring(0, 30)}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Risks: ${p.score}%</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem;">
+                            <i class="fa-solid fa-heart-pulse"></i> ${p.vitals.hr}
+                            <i class="fa-solid fa-lungs"></i> ${p.vitals.spo2}%
+                        </div>
+                     </div>
+                     
+                     <div class="staff-badges">${staffHtml}</div>
+                     <button onclick="discharge(${b.id}, event)" style="margin-top: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid #555; color: white; cursor: pointer; font-size: 0.7rem; position: relative; z-index: 2;">
+                         Discharge
+                     </button>
+                 </div>
+                 `;
+            }
+        });
+
+        doc.innerHTML = html;
+        document.getElementById('bed-free-count').innerText = freeCount;
+
+        // Update ECGs
+        bedData.forEach(b => {
+            // Pass Priority (Default 0)
+            const priority = b.patient ? (b.patient.priority || 0) : 0;
+            // HR needed for speed/rate
+            if (b.patient) startECG(b.id, b.patient.vitals.hr, priority);
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. ECG Animation Logic
+    // -------------------------------------------------------------------------
+    const ecgState = {};
+
+    function startECG(bedId, hr, priority) {
+        // ALWAYS re-acquire canvas because renderBeds destroys DOM
+        setTimeout(() => {
+            const canvas = document.getElementById(`ecg-${bedId}`);
+            if (!canvas) {
+                delete ecgState[bedId];
+                return;
+            }
+
+            // Re-init context if missing or element changed
+            ecgState[bedId] = {
+                ctx: canvas.getContext('2d'),
+                width: canvas.width,
+                height: canvas.height,
+                x: ecgState[bedId]?.x || 0,
+                lastY: ecgState[bedId]?.lastY || canvas.height / 2,
+                hr: hr,
+                priority: priority // Store Priority (0-3)
+            };
+        }, 50);
+    }
+
+    function animateECG() {
+        Object.keys(ecgState).forEach(bid => {
+            const s = ecgState[bid];
+            const ctx = s.ctx;
+            const speed = 2;
+
+            ctx.beginPath();
+
+            // Strict Priority-Color Mapping (Matches Queue exactly)
+            // 3=Red, 2=Orange, 1=Yellow, 0=Green
+            let color = '#22c55e';
+            if (s.priority === 3) color = '#ef4444';
+            else if (s.priority === 2) color = '#f97316';
+            else if (s.priority === 1) color = '#eab308';
+            else color = '#22c55e';
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.moveTo(s.x, s.lastY);
+
+            s.x += speed;
+
+            // Waveform Logic
+            const beatInterval = (60 / s.hr) * 60 * speed;
+            const posInBeat = s.x % beatInterval;
+
+            let y = s.height / 2;
+            // Simple QRS Complex Simulation
+            if (posInBeat < 10) y = s.height / 2;
+            else if (posInBeat < 15) y = s.height / 2 - 5;
+            else if (posInBeat < 20) y = s.height / 2 + 2;
+            else if (posInBeat < 25) y = s.height / 2 - 20; // QRS High
+            else if (posInBeat < 30) y = s.height / 2 + 10; // QRS Low
+            else if (posInBeat < 35) y = s.height / 2;
+            else if (posInBeat < 45) y = s.height / 2 - 8; // T wave
+            else y = s.height / 2;
+
+            y += (Math.random() - 0.5) * 2; // Noise
+
+            ctx.lineTo(s.x, y);
+            ctx.stroke();
+
+            s.lastY = y;
+
+            // Loop & Clear
+            if (s.x > s.width) {
+                s.x = 0;
+                s.lastY = s.height / 2;
+                ctx.clearRect(0, 0, s.width, s.height);
+            }
+
+            // Eraser Bar
+            ctx.clearRect(s.x + 1, 0, 10, s.height);
+        });
+        requestAnimationFrame(animateECG);
+    }
+    animateECG();
+
+    // -------------------------------------------------------------------------
+    // 4. Actions (Discharge, Drag/Drop)
+    // -------------------------------------------------------------------------
+    async function discharge(bid, e) {
+        e.stopPropagation();
+        if (!confirm("Discharge patient?")) return;
+        delete ecgState[bid];
+        await axios.post('/api/discharge', { bed_id: bid });
+        refreshAll();
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. Command Bar Logic (Replaces Voice)
+    // -------------------------------------------------------------------------
+    const cmdInput = document.getElementById('cmd-input');
+    const cmdPanel = document.getElementById('cmd-panel');
+
+    // Toggle via CMD+K or Button
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            toggleCmd();
+        }
+    });
+
+    function toggleCmd() {
+        if (cmdPanel.style.display === 'flex') {
+            cmdPanel.style.display = 'none';
+        } else {
+            cmdPanel.style.display = 'flex';
+            cmdInput.focus();
+        }
+    }
+
+    // Auto-init listener if element exists
+    if (cmdInput) {
+        cmdInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const raw = cmdInput.value.trim();
+                if (!raw) return;
+                await processCommand(raw);
+                cmdInput.value = '';
+            }
+        });
+    }
+
+    async function processCommand(raw) {
+        const parts = raw.split(' ');
+        const cmd = parts[0].toLowerCase();
+
+        try {
+            if (cmd === 'd' || cmd === 'discharge') {
+                const bedId = parseInt(parts[1]);
+                if (bedId) {
+                    if (!confirm(`⚠️ Confirm Discharge Bed ${bedId}?`)) return;
+                    await axios.post('/api/discharge', { bed_id: bedId });
+                    showToast(`✅ Bed ${bedId} Discharged`);
+                    refreshAll();
+                }
+            } else if (cmd === 'n' || cmd === 'note') {
+                const bedId = parseInt(parts[1]);
+                const text = parts.slice(2).join(' ');
+
+                const bed = bedData.find(b => b.id === bedId);
+                if (bed && bed.patient) {
+                    await axios.post('/api/notes', { patient_id: bed.patient.id, note: text });
+                    showToast(`✅ Note added to Bed ${bedId}`);
+                } else {
+                    showToast(`❌ Bed ${bedId} Empty`);
+                }
+            } else if (cmd === 'a' || cmd === 'assign') {
+                const bedId = parseInt(parts[1]);
+                let pid = parts[2];
+
+                // Check if Bed is Occupied
+                const bed = bedData.find(b => b.id === bedId);
+                if (bed && bed.patient) {
+                    showToast(`❌ Error: Bed ${bedId} already assigned to ${bed.patient.name}`);
+                    return;
+                }
+
+                if (!pid && queueData.length > 0) {
+                    pid = queueData[0].id;
+                }
+
+                if (pid && bedId) {
+                    await axios.post('/api/assign', { patient_id: pid, bed_id: bedId });
+                    showToast(`✅ Assigned to Bed ${bedId}`);
+                    refreshAll();
+                } else {
+                    showToast("❌ No patients available");
+                }
+            } else if (cmd === 'help') {
+                alert("Commands:\nd <id> - Discharge\nn <id> <text> - Add Note\na <id> - Assign Next Patient");
+            } else {
+                showToast("❓ Unknown Command");
+            }
+        } catch (e) {
+            showToast("❌ Error executing command");
+            console.error(e);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. Command Bar Enhancements (Macros & Voice)
+    // -------------------------------------------------------------------------
+    let currentCmdAction = '';
+
+    function setCmdAction(action) {
+        currentCmdAction = action;
+
+        // Visual Feedback
+        document.querySelectorAll('.action-key').forEach(el => el.classList.remove('macro-active'));
+        const btn = Array.from(document.querySelectorAll('.action-key')).find(el => el.innerText[0].toLowerCase() === action);
+        if (btn) btn.classList.add('macro-active');
+
+        cmdInput.value = action + " ";
+        cmdInput.focus();
+    }
+
+    function appendCmdBed(bedId) {
+        if (!currentCmdAction) {
+            // Shake input to indicate needing action first? Or just default to append
+            cmdInput.value += bedId + " ";
+            cmdInput.focus();
+            return;
+        }
+
+        cmdInput.value = currentCmdAction + " " + bedId;
+
+        // Auto-Execute for Discharge/Assign (simple commands)
+        if (currentCmdAction === 'd' || currentCmdAction === 'a') {
+            processCommand(cmdInput.value);
+            // Reset UI
+            cmdInput.value = "";
+            currentCmdAction = "";
+            document.querySelectorAll('.action-key').forEach(el => el.classList.remove('macro-active'));
+        } else {
+            // For Note/Assign, keep focus for adding text or confirming
+            cmdInput.focus();
+            // Maybe add space for note
+            if (currentCmdAction === 'n') cmdInput.value += " ";
+        }
+    }
+
+    // Voice-to-Text Re-integration
+    let isListening = false;
+    let micRestart = false;
+
+    function recordCmd() {
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("No Voice Support"); return;
+        }
+        if (isListening) return; // Prevent double bind
+
+        const r = new webkitSpeechRecognition();
+        r.lang = 'en-US';
+        r.interimResults = false;
+
+        const micBtn = document.getElementById('mic-trigger');
+        micBtn.style.color = 'var(--risk-critical)';
+        micBtn.classList.add('fa-beat'); // Visual cue
+        isListening = true;
+
+        r.onresult = (e) => {
+            let txt = e.results[0][0].transcript.toLowerCase();
+
+            // 0. Check for Confirmation
+            if (txt.includes('confirm') || txt.includes('send') || txt.includes('execute')) {
+                const current = cmdInput.value.trim();
+                if (current.length > 3) {
+                    processCommand(current);
+                    cmdInput.value = "";
+                    micRestart = false; // Stop loop
+                    return;
+                }
+            }
+
+            // 1. Smart Map: "Discharge bed one" -> "d 1"
+            txt = txt.replace('discharge', 'd').replace('bed', '').replace('one', '1').replace('two', '2').replace('three', '3');
+            txt = txt.replace('note', 'n').replace('assign', 'a');
+
+            // 2. Fix Formatting
+            // "d1" -> "d 1"
+            txt = txt.replace(/([dna])(\d)/gi, '$1 $2');
+            // "1Panadol" -> "1 Panadol"
+            txt = txt.replace(/(\d)([a-z])/gi, '$1 $2');
+            // Remove trailing punct
+            txt = txt.replace(/[.,;!?]$/, '');
+
+            // 3. Logic: Append or Replace
+            // Check if we already have a partial command "n 1"
+            if (cmdInput.value.match(/^[n]\s\d+/)) {
+                // We are in Note Mode.
+                // If the new text is just "n 1" again (repetition), ignore
+                if (txt.match(/^[n]\s\d+$/)) {
+                    // ignore
+                } else {
+                    // Append Note Text (Ensure Space)
+                    cmdInput.value = cmdInput.value.trim() + " " + txt;
+                    // Auto-enable restart to capture more text or "Confirm"
+                    micRestart = true;
+                }
+            }
+            else if (cmdInput.value.trim() === "") {
+                // First input
+                cmdInput.value = txt;
+                // If it's a note command ("n 1"), enable loop
+                if (txt.match(/^n\s\d+/)) {
+                    micRestart = true;
+                }
+                // If simple command (d 1), just execute? No, user asked for confirm now.
+                // We'll let them say "Confirm" or hit Enter.
+            }
+            else {
+                // Append generic
+                cmdInput.value += " " + txt;
+            }
+
+            cmdInput.focus();
+        };
+
+        r.onerror = () => {
+            micBtn.style.color = '#94a3b8';
+            micBtn.classList.remove('fa-beat');
+            isListening = false;
+        };
+
+        r.onend = () => {
+            if (micRestart) {
+                // Restart for continuous note taking
+                r.start();
+            } else {
+                micBtn.style.color = '#94a3b8';
+                micBtn.classList.remove('fa-beat');
+                isListening = false;
+            }
+        };
+
+        r.start();
+    }
+
+    function showToast(msg) {
+        // Simple toast notification
+        const t = document.createElement('div');
+        t.innerText = msg;
+        t.style.position = 'fixed';
+        t.style.bottom = '80px';
+        t.style.left = '50%';
+        t.style.transform = 'translateX(-50%)';
+        t.style.background = 'rgba(0,0,0,0.8)';
+        t.style.color = 'white';
+        t.style.padding = '10px 20px';
+        t.style.borderRadius = '20px';
+        t.style.zIndex = 9999;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2000);
+    }
+
+    // ... Drag Drop ...
+    function allowDrop(ev) { ev.preventDefault(); if (ev.target.closest('.bed-card')) ev.target.closest('.bed-card').classList.add('drag-over'); }
+    function dragLeave(ev) { if (ev.target.closest('.bed-card')) ev.target.closest('.bed-card').classList.remove('drag-over'); }
+    function drag(ev) { ev.dataTransfer.setData("patient_id", ev.target.id); }
+    async function drop(ev) {
+        ev.preventDefault();
+        const bedCard = ev.target.closest('.bed-card');
+        if (!bedCard) return;
+        bedCard.classList.remove('drag-over');
+        const pid = ev.dataTransfer.getData("patient_id");
+        const bid = parseInt(bedCard.dataset.bedId);
+        if (!pid || !bid) return;
+        try { await axios.post('/api/assign', { patient_id: pid, bed_id: bid }); refreshAll(); } catch (e) { alert("Error: " + (e.response?.data?.error || "Unknown")); }
+    }
+
+    // Ambulance
+    async function fetchAmbulances() {
+        try {
+            // Use REAL endpoint now
+            const res = await axios.get('/api/ambulances_real');
+            const amps = res.data;
+            let text = "";
+            if (amps.length > 0) {
+                document.getElementById('ambulance-ticker').style.display = 'block';
+                // Richer Format: ID | TIME | NAME | CONDITION | SYMPTOMS
+                // Richer Format: ID | TIME | NAME | CONDITION | SYMPTOMS
+                text = amps.map(a => {
+                    let icon = a.display_type === 'AMB' ? '<i class="fa-solid fa-truck-medical" style="color: #ff4444;"></i>' : '<i class="fa-solid fa-car-side" style="color: #60a5fa;"></i>';
+                    let typeLabel = a.display_type === 'AMB' ? 'EMS' : 'SELF';
+                    let dest = a.destination ? `<span style="background:#22c55e33; padding:2px 5px; border-radius:4px; color:#4ade80; font-size:0.9rem; margin-left:10px;"><i class="fa-solid fa-location-dot"></i> ${a.destination.toUpperCase()}</span>` : '';
+
+                    return `
+                    <span style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 0 3rem;">
+                        ${icon} <b style="color: white; font-size: 1.1rem;">${typeLabel} ${a.id}</b> 
+                        <span style="color: #ccc;">@ ${a.arrival_time}</span> ${dest}
+                        <span style="border-left: 1px solid #555; padding-left: 0.5rem;">
+                            <b style="color: var(--accent-cyan);">${a.name}</b>
+                        </span>
+                        <span style="color: #ff9999; font-weight: bold;">${a.condition}</span>
+                        <span style="font-style: italic; opacity: 0.7; font-size: 0.9rem;">(${a.symptoms})</span>
+                    </span>
+                `}).join('<span style="color: #333;"> | </span>');
+            } else {
+                document.getElementById('ambulance-ticker').style.display = 'none';
+            }
+            document.getElementById('ticker-content').innerHTML = text;
+        } catch (e) { }
+    }
+    setInterval(fetchAmbulances, 5000);
+    fetchAmbulances();
+
+    // Chaos
+    async function triggerChaos() {
+        // Production App: Real events come from `/api/ambulances_real` return;
+
+        document.body.style.animation = "shake 0.5s";
+        setTimeout(() => document.body.style.animation = "", 500);
+
+        const audio = document.getElementById('alarm-sound');
+        audio.src = "https://assets.mixkit.co/active_storage/sfx/995/995-preview.mp3";
+        audio.play().catch(() => { });
+
+        await axios.post('/api/chaos');
+        refreshAll();
+    }
+
+    // Analytics
+    let triageChartInstance = null;
+    async function openAnalytics() {
+        document.getElementById('analytics-modal').style.display = 'block';
+
+        try {
+            const res = await axios.get('/api/stats');
+            const s = res.data;
+
+            document.getElementById('stat-entered').innerText = s.total_entered;
+            document.getElementById('stat-discharged').innerText = s.discharged;
+            document.getElementById('stat-remaining').innerText = s.remaining;
+            document.getElementById('stat-wait').innerText = s.avg_wait_seconds + "s";
+
+            // Prediction Logic
+            const pred = s.saturation_prediction;
+            const banner = document.getElementById('prediction-banner');
+            const pText = document.getElementById('prediction-text');
+            banner.style.display = 'block';
+
+            if (pred > 100) {
+                banner.style.borderColor = "var(--risk-critical)";
+                banner.style.background = "rgba(239, 68, 68, 0.1)";
+                pText.style.color = "var(--risk-critical)";
+                pText.innerText = `⚠️ CRITICAL SATURATION IMMINENT (${pred}%)`;
+            } else if (pred > 80) {
+                banner.style.borderColor = "var(--risk-high)";
+                banner.style.background = "rgba(249, 115, 22, 0.1)";
+                pText.style.color = "var(--risk-high)";
+                pText.innerText = `⚠️ HIGH LOAD ADVISORY (${pred}%)`;
+            } else {
+                banner.style.borderColor = "var(--risk-low)";
+                banner.style.background = "rgba(34, 197, 94, 0.1)";
+                pText.style.color = "var(--risk-low)";
+                pText.innerText = `✅ STABLE FLOW PREDICTED (${pred}%)`;
+            }
+            // Add Capacity Text
+            pText.innerHTML += `<div style="font-size: 0.9rem; margin-top: 0.5rem; color: white;">Capacity next 1hr: <span style="color: ${s.capacity_prediction < 0 ? '#ff4444' : '#22c55e'}">${s.capacity_prediction > 0 ? '+' : ''}${s.capacity_prediction} Patients</span></div>`;
+
+            const ctx = document.getElementById('triageChart').getContext('2d');
+            if (triageChartInstance) triageChartInstance.destroy();
+
+            triageChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Normal', 'Urgent', 'Emergency', 'Critical'],
+                    datasets: [{
+                        label: 'Patient Distribution',
+                        data: [s.triage_distribution['0'], s.triage_distribution['1'], s.triage_distribution['2'], s.triage_distribution['3']],
+                        backgroundColor: ['#22c55e', '#eab308', '#f97316', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: 'Real-Time Triage Load', color: 'white' } },
+                    scales: { y: { grid: { color: '#333' }, ticks: { color: '#aaa' } }, x: { grid: { display: false }, ticks: { color: '#aaa' } } }
+                }
+            });
+        } catch (e) { console.error("Stats Error", e); }
+    }
+
+    // AI Copilot
+    function openCopilot(pid, isBed = false) {
+        const modal = document.getElementById('copilot-modal');
+        const content = document.getElementById('copilot-content');
+        modal.style.display = 'block';
+        content.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fa-solid fa-brain fa-pulse fa-3x" style="color: var(--accent-cyan);"></i><p>Analyzing...</p></div>';
+
+        setTimeout(async () => {
+            let p;
+            if (isBed) {
+                const bed = bedData.find(b => b.patient && b.patient.id == pid);
+                p = bed ? bed.patient : null;
+            } else {
+                p = queueData.find(i => i.id == pid);
+            }
+
+            // If not found in local data, fetch
+            if (!p) {
+                try {
+                    const res = await axios.get('/api/patient/' + pid);
+                    p = res.data;
+                } catch (e) { content.innerHTML = "Patient data unavailable."; return; }
+            }
+
+            // Mock Diagnostics
+            let diagnosis = "General Observation";
+            let plan = ["Monitor Vitals"];
+            let color = "var(--text-primary)";
+
+            // Helper to check symptom existence (Dict or String)
+            const hasSym = (key) => {
+                if (typeof p.symptoms === 'object') return p.symptoms[key];
+                const str = (p.symptoms || "") + " " + (p.checklist || []).join(" ");
+                return str.toLowerCase().includes(key.toLowerCase());
+            };
+
+            if (p.vitals.spo2 < 93 || hasSym("Breath") || hasSym("Sob")) { diagnosis = "Respiratory Distress"; plan = ["Oxygen", "CX-Ray"]; color = "var(--risk-high)"; }
+            if ((hasSym("Pain") || hasSym("Chest")) && p.age > 40) { diagnosis = "Possible Acute Coronary Syndrome"; plan = ["ECG", "Troponin"]; color = "var(--risk-critical)"; }
+            if (p.vitals.sys_bp > 180) { diagnosis = "Hypertensive Crisis"; plan = ["Labetalol", "CT Head"]; color = "var(--risk-critical)"; }
+            if (hasSym("Crash") || hasSym("Trauma") || hasSym("Bleed")) { diagnosis = "Trauma Alert"; plan = ["FAST Exam", "Type & Screen", "Surgery Consult"]; color = "var(--risk-critical)"; }
+
+            // Notes Render
+            const notesHtml = (p.notes || []).map(n => `
+                <div style="background: rgba(255,255,255,0.05); padding: 0.5rem; margin-top: 0.5rem; border-left: 2px solid var(--accent-cyan); border-radius: 4px;">
+                    <div style="color: #e2e8f0; font-style: italic;">"${n.text}"</div>
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; display: flex; justify-content: space-between;">
+                        <span><i class="fa-solid fa-user-doctor"></i> ${n.author || 'Staff'}</span>
+                        <span>${n.time || ''}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            content.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h3 style="color: #94a3b8; margin-top: 0;">Patient Summary</h3>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: white;">${p.name} <span style="font-size:1rem; color:#64748b;">(${p.age}y)</span></div>
+                        <ul style="margin-top: 1rem; color: #cbd5e1; list-style: none; padding: 0;">
+                            <li style="margin-bottom: 0.5rem;"><i class="fa-solid fa-triangle-exclamation" style="width: 20px;"></i> Risk Score: <strong style="color:${color}">${p.score}%</strong></li>
+                            <li><i class="fa-solid fa-notes-medical" style="width: 20px;"></i> Symptom: ${typeof p.symptoms === 'object'
+                    ? Object.keys(p.symptoms).filter(k => p.symptoms[k]).join(', ')
+                    : p.symptoms
+                } 
+                            ${p.checklist && p.checklist.length > 0 ? '<span style="color:var(--risk-high)"> + ' + p.checklist.join(', ') + '</span>' : ''}
+                            </li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem; color: var(--accent-cyan); border-bottom: 1px solid #334155; padding-bottom: 0.5rem;">
+                            <i class="fa-solid fa-clipboard"></i> Clinical Notes
+                        </h4>
+                        <div id="notes-list" style="max-height: 200px; overflow-y: auto;">
+                            ${notesHtml || '<div style="color: #64748b; font-style: italic; padding: 1rem;">No notes recorded. use "n [bed] [text]" to add.</div>'}
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="color: var(--accent-cyan); margin-top: 0;">AI Assessment</h3>
+                        <div style="background: rgba(6, 182, 212, 0.1); padding: 1rem; border-left: 4px solid var(--accent-cyan); border-radius: 4px;">
+                            <div style="font-weight: bold; font-size: 1.1rem; color: white;">${diagnosis}</div>
+                            <div style="font-size: 0.9rem; color: var(--accent-cyan); margin-top: 0.5rem;">Confidence: 94%</div>
+                        </div>
+                        
+                        <h4 style="margin-top: 1.5rem;">Recommended Plan</h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            ${plan.map(i => `<label style="background: rgba(255,255,255,0.05); padding: 0.5rem; border-radius: 4px;"><input type="checkbox" checked> ${i}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }, 500);
+    }
+
+    // Init
+    setInterval(refreshAll, 3000);
+    refreshAll();
+
+    // -------------------------------------------------------------------------
+    // 9. SMART CITY MAP ENGINE (The "Green Wave" Core)
+    // -------------------------------------------------------------------------
+    class CityMapEngine {
+        constructor() {
+            this.canvas = document.getElementById('city-map');
+            this.ctx = this.canvas.getContext('2d');
+            this.container = document.getElementById('city-map-container');
+
+            // DRONE FEED CANVAS
+            this.feedCanvas = document.getElementById('drone-cam');
+            this.feedCtx = this.feedCanvas ? this.feedCanvas.getContext('2d') : null;
+
+            this.nodes = []; // Intersections {x, y, id, lightState: 'red'|'green'}
+            this.edges = []; // Roads {from: id, to: id, weight: int}
+            this.cars = [];  // Traffic {x, y, targetNode, speed}
+
+            this.gridSizeX = 6;
+            this.gridSizeY = 4;
+            this.spacing = 100;
+
+            this.isRunning = false;
+        }
+
+        init() {
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            this.generateGrid();
+            this.spawnTraffic(20); // 20 Civilian Cars
+            this.isRunning = true;
+            this.loop();
+        }
+
+        resize() {
+            this.canvas.width = this.container.clientWidth;
+            this.canvas.height = this.container.clientHeight;
+            this.generateGrid(); // Regenerate coordinates on resize
+        }
+
+        generateGrid() {
+            this.nodes = [];
+            this.edges = [];
+            this.blocks = []; // City Blocks (Buildings)
+
+            // Dynamic Spacing based on screen size
+            const pads = 60;
+            const availW = this.canvas.width - (pads * 2);
+            const availH = this.canvas.height - (pads * 2);
+            const stepX = availW / (this.gridSizeX - 1);
+            const stepY = availH / (this.gridSizeY - 1);
+
+            // Create Nodes
+            let id = 0;
+            for (let y = 0; y < this.gridSizeY; y++) {
+                for (let x = 0; x < this.gridSizeX; x++) {
+                    this.nodes.push({
+                        id: id++,
+                        x: pads + (x * stepX),
+                        y: pads + (y * stepY),
+                        state: Math.random() > 0.5 ? 'green' : 'red',
+                        timer: Math.random() * 100
+                    });
+                }
+            }
+
+            // Create Edges
+            for (let i = 0; i < this.nodes.length; i++) {
+                if ((i + 1) % this.gridSizeX !== 0) {
+                    this.edges.push({ from: i, to: i + 1 });
+                    this.edges.push({ from: i + 1, to: i });
+                }
+                if (i + this.gridSizeX < this.nodes.length) {
+                    this.edges.push({ from: i, to: i + this.gridSizeX });
+                    this.edges.push({ from: i + this.gridSizeX, to: i });
+                }
+            }
+
+            // Create City Blocks (Holographic Buildings between roads)
+            for (let y = 0; y < this.gridSizeY - 1; y++) {
+                for (let x = 0; x < this.gridSizeX - 1; x++) {
+                    // Top-left node of this block
+                    const n1 = this.nodes[y * this.gridSizeX + x];
+                    // Dimensions of the block (minus road width padding)
+                    const w = stepX - 40;
+                    const h = stepY - 40;
+
+                    // Simple "Building" rect
+                    this.blocks.push({
+                        x: n1.x + 20,
+                        y: n1.y + 20,
+                        w: w,
+                        h: h,
+                        height: 20 + Math.random() * 50 // Pseudo-3D height
+                    });
+                }
+            }
+
+            // Initialize Drone
+            this.drone = { x: 50, y: 50, angle: 0, targetX: 100, targetY: 100 };
+        }
+
+        spawnTraffic(count) {
+            this.cars = [];
+            for (let i = 0; i < count; i++) {
+                // Random start edge
+                const edge = this.edges[Math.floor(Math.random() * this.edges.length)];
+                const startNode = this.nodes[edge.from];
+                this.cars.push({
+                    x: startNode.x,
+                    y: startNode.y,
+                    target: edge.to,
+                    from: edge.from,
+                    speed: 1 + Math.random(), // Random speed
+                    color: '#64748b' // Civilian color
+                });
+            }
+        }
+
+        loop() {
+            if (!this.isRunning) return;
+
+            this.update();
+            this.draw();
+
+            requestAnimationFrame(() => this.loop());
+        }
+
+        update() {
+            // 1. Traffic Lights Cycle
+            this.nodes.forEach(n => {
+                n.timer++;
+                if (n.timer > 300) {
+                    n.state = n.state === 'red' ? 'green' : 'red';
+                    n.timer = 0;
+                }
+            });
+
+            let ambulance = null;
+
+            // 2. Move Cars
+            this.cars.forEach((car, index) => {
+                if (car.color === '#ef4444') ambulance = car;
+
+                const targetNode = this.nodes[car.target];
+                const startNode = this.nodes[car.from]; // Need start node for vector math
+
+                // Base Vector (Center of road)
+                // We interpolate position based on 'progress' (0.0 to 1.0) instead of absolute X/Y to handle offsets easily?
+                // Actually, existing logic uses absolute X/Y. Let's keep it but calculate visual offset in DRAW, 
+                // OR apply offset to the physics model. Applying to physics is better for turning.
+
+                // Let's stick to the current Move-Toward-Target logic but maintain an "Offset Target".
+                // Actually, the simplest way for this codebase:
+                // We leave the LOGIC x/y as center-to-center (for graph traversal).
+                // We only offset the VISUALS in draw().
+
+                const rawDx = targetNode.x - car.x;
+                const rawDy = targetNode.y - car.y;
+                const dist = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
+
+                // *** GREEN WAVE LOGIC ***
+                if (car.color === '#ef4444' && dist < 250 && targetNode.state === 'red') {
+                    targetNode.state = 'green';
+                    targetNode.timer = 0;
+                }
+
+                // Stop at Red Lights (Civilian Only)
+                if (dist < 30 && targetNode.state === 'red' && car.color !== '#ef4444') {
+                    return;
+                }
+
+                if (dist < 5) {
+                    // Arrived
+                    car.x = targetNode.x;
+                    car.y = targetNode.y;
+                    car.from = car.target; // Update From Node
+
+                    if (car.color === '#ef4444' && car.x > this.canvas.width - 100 && car.y > this.canvas.height - 100) {
+                        this.cars.splice(index, 1);
+                        this.activeRoute = []; // Clear route when done
+                        return;
+                    }
+
+                    // Route/Random Logic
+                    if (car.path && car.path.length > 0) {
+                        // Remove visited node from GLOBAL active route for drawing
+                        if (this.activeRoute && this.activeRoute.length > 0 && this.activeRoute[0] === car.path[0]) {
+                            this.activeRoute.shift();
+                        }
+
+                        const nextId = car.path[0];
+                        const connected = this.edges.some(e => (e.from === car.target && e.to === nextId));
+                        if (connected) car.target = car.path.shift();
+                        else car.target = this.getRandomNeighbor(car);
+                    } else {
+                        car.target = this.getRandomNeighbor(car);
+                    }
+                } else {
+                    // Move
+                    car.x += (rawDx / dist) * car.speed;
+                    car.y += (rawDy / dist) * car.speed;
+                }
+            });
+
+            // 3. Drone Logic (Escort Mode)
+            const d = this.drone;
+            if (ambulance) {
+                // TRACKING MODE: Fly to Ambulance
+                // Lead the target slightly
+                const targetX = ambulance.x;
+                const targetY = ambulance.y;
+
+                const dx = targetX - d.x;
+                const dy = targetY - d.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 10) {
+                    d.x += (dx / dist) * 4; // Fast flight
+                    d.y += (dy / dist) * 4;
+                    d.angle = Math.atan2(dy, dx) + Math.PI / 2;
+                } else {
+                    // Hover and rotate
+                    d.angle += 0.1;
+                }
+                d.mode = 'TRACKING';
+            } else {
+                // PATROL MODE (Figure 8)
+                const time = Date.now() * 0.0005;
+                const cx = this.canvas.width / 2;
+                const cy = this.canvas.height / 2;
+                d.x = cx + Math.cos(time) * (cx - 50);
+                d.y = cy + Math.sin(time * 2) * (cy - 100);
+                d.angle += 0.05;
+                d.mode = 'PATROL';
+            }
+        }
+
+        // ... [Pathfinding Helper methods same as before] ...
+
+        draw() {
+            this.ctx.fillStyle = '#0f172a'; // BG
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // DRAW BUILDINGS (Background Layer)
+            this.ctx.shadowBlur = 0;
+            this.blocks.forEach(b => {
+                // "Holographic" footprint
+                this.ctx.fillStyle = 'rgba(30, 41, 59, 0.5)';
+                this.ctx.fillRect(b.x, b.y, b.w, b.h);
+
+                // Outline
+                this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)'; // Faint Cyan
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+                // "Rooftop" (Pseudo 3D shift)
+                // Shift up-left slightly based on height
+                const shift = b.height * 0.2;
+                this.ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                this.ctx.fillRect(b.x - shift, b.y - shift, b.w, b.h);
+                this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+                this.ctx.strokeRect(b.x - shift, b.y - shift, b.w, b.h);
+
+                // Connecting lines (Corners)
+                this.ctx.beginPath();
+                this.ctx.moveTo(b.x, b.y); this.ctx.lineTo(b.x - shift, b.y - shift);
+                this.ctx.moveTo(b.x + b.w, b.y); this.ctx.lineTo(b.x + b.w - shift, b.y - shift);
+                this.ctx.moveTo(b.x, b.y + b.h); this.ctx.lineTo(b.x - shift, b.y + b.h - shift);
+                this.ctx.stroke();
+            });
+
+            // Draw Roads (Wider for 2 lanes)
+            this.ctx.strokeStyle = '#1e293b';
+            this.ctx.lineWidth = 26; // Much wider
+            this.ctx.lineCap = 'round';
+            this.ctx.beginPath();
+            this.edges.forEach(e => {
+                const n1 = this.nodes[e.from];
+                const n2 = this.nodes[e.to];
+                this.ctx.moveTo(n1.x, n1.y);
+                this.ctx.lineTo(n2.x, n2.y);
+            });
+            this.ctx.stroke();
+
+            // AMBULANCE PATH HIGHLIGHT (The "Green Wave" Visual)
+            if (this.activeRoute && this.activeRoute.length > 0) {
+                this.ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)'; // Green Glow
+                this.ctx.lineWidth = 10;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.setLineDash([10, 10]); // Animated Dash?
+                this.ctx.lineDashOffset = -Date.now() / 20; // Flowing effect
+
+                this.ctx.beginPath();
+                // Start from Ambulance Current Pos OR current logical Start Node
+                const amb = this.cars.find(c => c.color === '#ef4444');
+                if (amb) {
+                    const startN = this.nodes[amb.from];
+                    const targetN = this.nodes[amb.target];
+                    // Simple trace: Target -> Route...
+                    this.ctx.moveTo(targetN.x, targetN.y); // Simplified
+                }
+
+                // Draw the future path
+                // Route is list of IDs.
+                // We need to verify connectivity to draw smoothly? 
+                // We know they are connected.
+                // Ideally we draw from Current Car Pos -> Target -> Route[0] -> Route[1]...
+
+                // Let's just draw the "Future Segments" for simplicity and robustness
+                let prevNode = amb ? this.nodes[amb.target] : null;
+
+                this.activeRoute.forEach(nodeId => {
+                    const n = this.nodes[nodeId];
+                    if (prevNode) {
+                        const dx = n.x - prevNode.x;
+                        const dy = n.y - prevNode.y;
+                        const angle = Math.atan2(dy, dx);
+                        const off = 7;
+                        // Offset right
+                        this.ctx.lineTo(n.x + Math.cos(angle + Math.PI / 2) * off, n.y + Math.sin(angle + Math.PI / 2) * off);
+                    } else {
+                        this.ctx.moveTo(n.x, n.y); // Should handle first point better but fallback
+                    }
+                    prevNode = n;
+                });
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+
+            // Center Line (Yellow Double Solid)
+            this.ctx.strokeStyle = '#d97706'; // Dark Yellow
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.edges.forEach(e => {
+                const n1 = this.nodes[e.from];
+                const n2 = this.nodes[e.to];
+                this.ctx.moveTo(n1.x, n1.y);
+                this.ctx.lineTo(n2.x, n2.y);
+            });
+            this.ctx.stroke();
+
+
+            // Draw Intersections
+            this.nodes.forEach(n => {
+                // Determine bounding box for stop lines (Simple cross)
+                this.ctx.fillStyle = '#334155';
+                // Draw Road Stop Lines area
+                this.ctx.fillRect(n.x - 14, n.y - 14, 28, 28);
+
+                // Traffic Light Visuals (kept simple for brevity in this step if needed, or re-include)
+                // Re-including the Gantry logic from previous step:
+                this.ctx.fillStyle = '#111';
+                this.ctx.strokeStyle = '#444';
+                this.ctx.lineWidth = 1;
+                const gx = n.x - 8;
+                const gy = n.y - 35; // Higher up
+                this.ctx.fillRect(gx, gy, 16, 36);
+                this.ctx.strokeRect(gx, gy, 16, 36);
+                this.ctx.strokeStyle = '#666';
+                this.ctx.beginPath(); this.ctx.moveTo(n.x, n.y - 14); this.ctx.lineTo(n.x, gy + 36); this.ctx.stroke(); // Pole
+
+                const colors = ['#ef4444', '#eab308', '#22c55e'];
+                const states = ['red', 'yellow', 'green'];
+
+                for (let i = 0; i < 3; i++) {
+                    const ly = gy + 6 + (i * 12);
+                    this.ctx.beginPath();
+                    this.ctx.arc(n.x, ly, 4, 0, Math.PI * 2);
+
+                    if (states[i] === n.state) {
+                        // ON
+                        this.ctx.fillStyle = colors[i];
+                        this.ctx.shadowColor = colors[i];
+                        this.ctx.shadowBlur = 10;
+                        this.ctx.fill();
+                        this.ctx.shadowBlur = 0;
+                    } else {
+                        // OFF (Dim)
+                        this.ctx.fillStyle = '#222';
+                        this.ctx.fill();
+                    }
+                }
+            });
+
+            // Draw Cars with LANE OFFSET
+            this.cars.forEach(c => {
+                const targetNode = this.nodes[c.target];
+                const dx = targetNode.x - c.x;
+                const dy = targetNode.y - c.y;
+                const angle = Math.atan2(dy, dx);
+
+                const offsetDist = 7;
+                const offsetX = Math.cos(angle + Math.PI / 2) * offsetDist;
+                const offsetY = Math.sin(angle + Math.PI / 2) * offsetDist;
+
+                const visualX = c.x + offsetX;
+                const visualY = c.y + offsetY;
+
+                this.ctx.save();
+                this.ctx.translate(visualX, visualY);
+                this.ctx.rotate(angle);
+
+                if (c.color === '#ef4444') {
+                    // AMBULANCE
+                    this.ctx.fillStyle = '#f8fafc'; this.ctx.fillRect(-10, -5, 20, 10);
+                    this.ctx.fillStyle = '#ef4444'; this.ctx.fillRect(-10, -5, 5, 10); this.ctx.fillRect(5, -5, 5, 10);
+                    this.ctx.fillRect(-4, -1, 8, 2); this.ctx.fillRect(-1, -4, 2, 8);
+                    const flash = Date.now() % 150 < 70;
+                    if (flash) {
+                        this.ctx.fillStyle = '#3b82f6'; this.ctx.shadowColor = '#3b82f6'; this.ctx.shadowBlur = 15; this.ctx.fillRect(-9, -6, 3, 3);
+                        this.ctx.fillStyle = '#ef4444'; this.ctx.shadowColor = '#ef4444'; this.ctx.fillRect(-9, 3, 3, 3);
+                    }
+                    this.ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)'; this.ctx.lineWidth = 2;
+                    this.ctx.beginPath(); this.ctx.arc(0, 0, 15 + (Date.now() % 800) / 20, 0, Math.PI * 2); this.ctx.stroke();
+                    this.ctx.shadowBlur = 0; this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    this.ctx.beginPath(); this.ctx.moveTo(10, -3); this.ctx.lineTo(60, -15); this.ctx.lineTo(60, 15); this.ctx.lineTo(10, 3); this.ctx.fill();
+                } else {
+                    // CIVILIAN
+                    this.ctx.fillStyle = c.color; this.ctx.fillRect(-6, -3, 12, 6);
+                    this.ctx.fillStyle = '#0f172a'; this.ctx.fillRect(1, -2.5, 2, 5);
+                    this.ctx.fillStyle = 'rgba(255, 255, 100, 0.2)'; this.ctx.beginPath(); this.ctx.moveTo(4, -2); this.ctx.lineTo(25, -8); this.ctx.lineTo(25, 8); this.ctx.lineTo(4, 2); this.ctx.fill();
+                }
+                this.ctx.restore();
+            });
+
+            // DRONE
+            const d = this.drone;
+            this.ctx.save();
+            this.ctx.translate(d.x, d.y);
+            this.ctx.rotate(d.angle);
+
+            // Drone Body
+            this.ctx.fillStyle = d.mode === 'TRACKING' ? '#ef4444' : '#0ea5e9'; // Red when tracking, Blue patrol
+            this.ctx.strokeStyle = d.mode === 'TRACKING' ? '#ef4444' : '#0284c7';
+            this.ctx.lineWidth = 2;
+
+            // X-Wing shape
+            this.ctx.beginPath(); this.ctx.moveTo(-10, -10); this.ctx.lineTo(10, 10); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.moveTo(10, -10); this.ctx.lineTo(-10, 10); this.ctx.stroke();
+            this.ctx.beginPath(); this.ctx.arc(0, 0, 5, 0, Math.PI * 2); this.ctx.fill();
+
+            // Radar Cone (Scanning)
+            this.ctx.fillStyle = d.mode === 'TRACKING' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(14, 165, 233, 0.2)';
+            this.ctx.beginPath(); this.ctx.moveTo(0, 0); this.ctx.arc(0, 0, 60, -0.5, 0.5); this.ctx.fill();
+
+            // Spotlight on Tracking
+            if (d.mode === 'TRACKING' && this.cars.find(c => c.color === '#ef4444')) {
+                this.ctx.shadowColor = '#fff';
+                this.ctx.shadowBlur = 20;
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(-20, -100, 40, 40); // "Targeting Box" offset
+                this.ctx.fillText("TARGET ACQUIRED", -40, -110);
+            }
+
+            // Propeller spin
+            const pTime = Date.now() * 0.02;
+            this.ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            this.ctx.beginPath(); this.ctx.arc(-10, -10, 3 + Math.sin(pTime), 0, Math.PI * 2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(10, 10, 3 + Math.sin(pTime), 0, Math.PI * 2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(10, -10, 3 + Math.sin(pTime), 0, Math.PI * 2); this.ctx.fill();
+            this.ctx.beginPath(); this.ctx.arc(-10, 10, 3 + Math.sin(pTime), 0, Math.PI * 2); this.ctx.fill();
+
+            this.ctx.restore();
+
+            // Drone Label
+            this.ctx.fillStyle = d.mode === 'TRACKING' ? '#ef4444' : '#0ea5e9';
+            this.ctx.font = '10px monospace';
+            this.ctx.fillText(d.mode === 'TRACKING' ? "TRACKING-AMB-1" : "SKY-LINK-1", d.x + 15, d.y - 15);
+
+            // 2. DRONE FEED PIP (PICTURE IN PICTURE)
+            if (this.feedCtx) {
+                // Clear
+                this.feedCtx.fillStyle = '#000';
+                this.feedCtx.fillRect(0, 0, this.feedCanvas.width, this.feedCanvas.height);
+
+                if (d.mode === 'TRACKING') {
+                    const amb = this.cars.find(c => c.color === '#ef4444');
+                    if (amb) {
+                        // Capture area from MAIN canvas
+                        // Source: Ambulance pos +/- 100px
+                        const sx = Math.max(0, amb.x - 100);
+                        const sy = Math.max(0, amb.y - 100);
+                        const sSize = 200;
+                        // Dest: Full small canvas
+
+                        // We can use drawImage(canvas, ...)
+                        this.feedCtx.drawImage(this.canvas, sx, sy, sSize, sSize, 0, 0, this.feedCanvas.width, this.feedCanvas.height);
+
+                        // SCANLINES
+                        this.feedCtx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+                        this.feedCtx.fillRect(0, (Date.now() % 1000) / 1000 * 150, 200, 2);
+
+                        // HUD OVERLAY
+                        this.feedCtx.fillStyle = '#0f0';
+                        this.feedCtx.font = '10px monospace';
+                        this.feedCtx.fillText("REC ●", 10, 15);
+                        this.feedCtx.fillText("TGT: AMB-01", 10, 135);
+                        this.feedCtx.fillText("SPD: " + (amb.speed * 30).toFixed(0) + " KM/H", 110, 135);
+
+                        // Corner brackets
+                        this.feedCtx.strokeStyle = '#0f0';
+                        this.feedCtx.lineWidth = 2;
+                        this.feedCtx.strokeRect(5, 5, 190, 140);
+                    }
+                } else {
+                    // NO SIGNAL / PATROL VIEW
+                    this.feedCtx.fillStyle = '#111';
+                    this.feedCtx.fillRect(0, 0, 200, 150);
+                    this.feedCtx.fillStyle = '#0ea5e9';
+                    this.feedCtx.font = '12px monospace';
+                    this.feedCtx.fillText("SKY-LINK PATROL", 50, 75);
+                    this.feedCtx.fillText("WAITING FOR LINK...", 40, 90);
+                }
+            }
+        }
+
+        getRandomNeighbor(car) {
+            const neighbors = this.edges.filter(e => e.from === car.target).map(e => e.to);
+            const validNext = neighbors.filter(n => n !== car.from);
+            if (validNext.length > 0) return validNext[Math.floor(Math.random() * validNext.length)];
+            return neighbors[0];
+        }
+
+        // BFS Pathfinding Algorithm
+        findPath(startId, endId) {
+            // Basic BFS for unweighted grid
+            let queue = [[startId]];
+            let visited = new Set();
+            visited.add(startId);
+
+            while (queue.length > 0) {
+                let path = queue.shift();
+                let node = path[path.length - 1];
+
+                if (node === endId) return path.slice(1); // Return path excluding start
+
+                // Get neighbors
+                let neighbors = this.edges.filter(e => e.from === node).map(e => e.to);
+
+                for (let neighbor of neighbors) {
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        let newPath = [...path, neighbor];
+                        queue.push(newPath);
+                    }
+                }
+            }
+            return []; // No path found
+        }
+
+        // PUBLIC API
+        dispatchAmbulance() {
+            // FORCE SPAWN new Ambulance at Node 0 (Top Left)
+            const startNode = this.nodes[0];
+            const endNode = this.nodes[this.nodes.length - 1]; // Bottom Right
+
+            // Calculate Optimal Path
+            const path = this.findPath(startNode.id, endNode.id);
+
+            if (path.length === 0) {
+                alert("Error: No path found for ambulance!");
+                return;
+            }
+
+            // SAVE ROUTE FOR HIGHLIGHTING
+            this.activeRoute = [...path]; // Clone it
+
+            this.cars.push({
+                x: startNode.x,
+                y: startNode.y,
+                target: path.shift(), // First step
+                path: path,          // Remaining steps
+                from: 0,
+                speed: 3.5,
+                color: '#ef4444'
+            });
+
+            // alert("🚑 AMBULANCE DISPATCHED! \nDest: Sector " + endNode.id + "\nRoute Locked: " + (path.length+1) + " hops");
+            return "Ambulance Dispatched";
+        }
+    }
+
+    const cityMap = new CityMapEngine();
+    // Wait for DOM layout
+    setTimeout(() => cityMap.init(), 500);
+
+    // Particle Network Animation (Shared)
+    const canvas = document.getElementById('bg-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        const particleCount = 50;
+        const connectionDistance = 120;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.size = Math.random() * 2 + 1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(6, 182, 212, 0.3)'; // Cyan
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < particles.length; i++) {
+                let p1 = particles[i];
+                p1.update();
+                p1.draw();
+                for (let j = i + 1; j < particles.length; j++) {
+                    let p2 = particles[j];
+                    let dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+                    if (dist < connectionDistance) {
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+</script>
+{% endblock %}

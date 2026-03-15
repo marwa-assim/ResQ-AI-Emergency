@@ -1,0 +1,10 @@
+Python Executable: C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App\.venv\Scripts\python.exe
+System Path:
+C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App
+C:\Users\m.ayfan.KUDMN\AppData\Local\Programs\Python\Python39\python39.zip
+C:\Users\m.ayfan.KUDMN\AppData\Local\Programs\Python\Python39\DLLs
+C:\Users\m.ayfan.KUDMN\AppData\Local\Programs\Python\Python39\lib
+C:\Users\m.ayfan.KUDMN\AppData\Local\Programs\Python\Python39
+C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App\.venv
+C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App\.venv\lib\site-packages
+Flask-SQLAlchemy found at: C:\Users\m.ayfan.KUDMN\.gemini\antigravity\scratch\Emergency Room App\.venv\lib\site-packages\flask_sqlalchemy\__init__.py

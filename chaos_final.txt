@@ -1,0 +1,12 @@
+1. Checking Initial Queue...
+Initial Queue Length: 0
+2. Triggering Chaos...
+Status: 200
+{
+  "count": 16,
+  "status": "chaos_triggered"
+}
+
+3. Checking Final Queue...
+Final Queue Length: 16
+[PASS] Chaos added 16 patients successfully.

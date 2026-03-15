@@ -1,0 +1,328 @@
+﻿{% extends "layout.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 2rem;">
+    <!-- Background Particles -->
+    <canvas id="bg-canvas"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none;"></canvas>
+
+    <!-- Large Animated Logo -->
+    <div style="text-align: center; margin-bottom: 3rem; perspective: 1000px;">
+        <img src="/static/ResQ%20AI%20Logo.png"
+            style="height: 180px; width: auto; filter: drop-shadow(0 15px 30px rgba(6,182,212,0.4)); animation: logo3d 6s ease-in-out infinite;">
+    </div>
+
+    <style>
+        /* Shared Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Distinct Float */
+        @keyframes floatCard {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-12px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        @keyframes glowPulse {
+            0% {
+                box-shadow: 0 0 5px rgba(6, 182, 212, 0.2);
+                border-color: rgba(6, 182, 212, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(6, 182, 212, 0.6);
+                border-color: rgba(6, 182, 212, 1);
+            }
+
+            100% {
+                box-shadow: 0 0 5px rgba(6, 182, 212, 0.2);
+                border-color: rgba(6, 182, 212, 0.3);
+            }
+        }
+
+        @keyframes logo3d {
+            0% {
+                transform: rotateY(-15deg) translateY(0);
+            }
+
+            50% {
+                transform: rotateY(15deg) translateY(-10px);
+            }
+
+            100% {
+                transform: rotateY(-15deg) translateY(0);
+            }
+        }
+
+        .wizard-step {
+            animation: fadeUp 0.6s ease-out forwards, glowPulse 6s infinite alternate;
+            /* Added glowPulse */
+        }
+
+        /* New Class Name to Bust Cache */
+        .interactive-card {
+            background: rgba(15, 23, 42, 0.5) !important;
+            /* More transparent for particles */
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(6, 182, 212, 0.3) !important;
+            border-radius: 24px !important;
+            padding: 1.5rem !important;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            position: relative;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), inset 0 0 20px rgba(6, 182, 212, 0.05) !important;
+            /* GLOW */
+            color: white !important;
+            /* Floating Animation */
+            animation: floatCard 6s ease-in-out infinite;
+        }
+
+        .interactive-card:hover {
+            border-color: rgba(6, 182, 212, 0.8) !important;
+            background: rgba(30, 41, 59, 0.7) !important;
+            box-shadow: 0 0 40px rgba(6, 182, 212, 0.5) !important;
+            transform: translateY(-8px) scale(1.02);
+        }
+
+        .delay-1 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.4s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.6s;
+        }
+
+        /* ID Visual Specific */
+        .id-card-visual {
+            animation: glowPulse 3s infinite;
+        }
+    </style>
+
+    <!-- Step 1: Identification -->
+    <div id="step-1" class="panel wizard-step"
+        style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08);">
+        <h1 class="title-glow" style="text-align:center;"><i class="fa-solid fa-id-card"></i> Identification</h1>
+        <p style="text-align:center; color:#cbd5e1;">Please place your ID card on the scanner or enter your ID manually.
+        </p>
+
+        <div id="id-visual" class="id-card-visual"
+            style="margin: 2rem auto; border-color: rgba(6,182,212,0.5); border-width: 2px; border-style: solid; border-radius: 12px; background: rgba(0,0,0,0.2);">
+            <div class="scan-beam"></div>
+            <i class="fa-regular fa-id-badge"
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 5rem; color: rgba(255,255,255,0.2);"></i>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <input type="text" id="patient-id-input" placeholder="Enter ID (e.g., 1001)" value="1001"
+                style="background: #1e293b; border: 1px solid #475569; color: white; padding: 1rem; border-radius: 12px; font-size: 1.2rem; width: 220px; text-align:center;">
+            <button id="scan-btn" onclick="scanID()"
+                style="background: linear-gradient(135deg, var(--accent-cyan), #3b82f6); border: none; padding: 1rem 2rem; border-radius: 12px; font-size: 1.2rem; font-weight: bold; cursor: pointer; color: white; box-shadow: 0 4px 15px rgba(6,182,212,0.3);">
+                Scan ID Card
+            </button>
+        </div>
+
+        <!-- Manual Entry (Hidden by default) -->
+        <div id="manual-entry"
+            style="display: none; margin-top: 2rem; border: 1px solid #334155; padding: 1.5rem; border-radius: 16px; background: rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0;">Patient Not Found</h3>
+            <p style="color: grey;">Please enter details manually:</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1rem;">
+                <input type="text" id="manual-name" placeholder="Full Name"
+                    style="padding: 1rem; border-radius: 8px; border: 1px solid #475569; background:#1e293b; color:white; width: 200px;">
+                <input type="number" id="manual-age" placeholder="Age"
+                    style="padding: 1rem; border-radius: 8px; border: 1px solid #475569; background:#1e293b; color:white; width: 80px;">
+            </div>
+            <button onclick="submitManualEntry()"
+                style="background: white; color: black; padding: 0.8rem 2.5rem; border: none; font-weight: bold; border-radius: 30px; cursor: pointer;">
+                Continue
+            </button>
+        </div>
+
+        <div id="patient-name-display"
+            style="text-align: center; margin-top: 1rem; font-size: 1.2rem; color: var(--accent-cyan);"></div>
+    </div>
+
+    <!-- Step 2: Vitals -->
+    <div id="step-2" class="panel wizard-step" style="display: none; background: rgba(15, 23, 42, 0.85);">
+        <h1 class="title-glow" style="text-align:center;"><i class="fa-solid fa-heart-pulse"></i> Vitals Station</h1>
+        <p style="text-align:center; color:#cbd5e1;">Please use the attached sensors to measure your vitals.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
+            <!-- HR -->
+            <div class="interactive-card" onclick="simulateVital('hr')" style="animation-delay: 0s;">
+                <i class="fa-solid fa-heart" style="color: #ef4444; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Heart Rate</h3>
+                <div id="val-hr" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--</div>
+                <div id="btn-hr" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Measure</div>
+            </div>
+
+            <!-- SPO2 -->
+            <div class="interactive-card delay-1" onclick="simulateVital('spo2')">
+                <i class="fa-solid fa-lungs" style="color: #06b6d4; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">SpO2</h3>
+                <div id="val-spo2" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--</div>
+                <div id="btn-spo2" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Measure</div>
+            </div>
+
+            <!-- BP -->
+            <div class="interactive-card delay-2" onclick="simulateVital('bp')">
+                <i class="fa-solid fa-stethoscope" style="color: #eab308; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Blood Pressure</h3>
+                <div id="val-bp" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--/--</div>
+                <div id="btn-bp" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Inflate</div>
+            </div>
+
+            <!-- Temp -->
+            <div class="interactive-card delay-3" onclick="simulateVital('temp')">
+                <i class="fa-solid fa-temperature-half"
+                    style="color: #f97316; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Temperature</h3>
+                <div id="val-temp" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--</div>
+                <div id="btn-temp" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Scan</div>
+            </div>
+        </div>
+
+        <div style="text-align: right; margin-top: 2rem;">
+            <button onclick="showStep(3)"
+                style="background: white; color: black; padding: 1rem 3rem; border: none; font-weight: bold; border-radius: 30px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 0 15px rgba(255,255,255,0.3);">
+                Next <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <p style="font-size:0.9rem; color:#888; margin-top:10px;">
+            Waiting for patient interaction...
+        </p>
+    </div>
+
+    <!-- Step 3: Symptoms -->
+    <div id="step-3" class="panel wizard-step" style="display: none; background: rgba(15, 23, 42, 0.85);">
+        <h1 class="title-glow" style="text-align:center;"><i class="fa-solid fa-user-doctor"></i> Symptoms</h1>
+        <p style="text-align:center; color:#cbd5e1;">Do you have any of the following symptoms?</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top:2rem;">
+            <label class="interactive-card delay-1"
+                style="text-align: left; display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" id="sym-cp" style="transform: scale(1.5);">
+                <span style="font-size: 1.2rem; font-weight:500;">Chest Pain</span>
+            </label>
+            <label class="interactive-card delay-1"
+                style="text-align: left; display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" id="sym-br" style="transform: scale(1.5);">
+                <span style="font-size: 1.2rem; font-weight:500;">Shortness of Breath</span>
+            </label>
+            <label class="interactive-card delay-2"
+                style="text-align: left; display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" id="sym-bl" style="transform: scale(1.5);">
+                <span style="font-size: 1.2rem; font-weight:500;">Active Bleeding</span>
+            </label>
+            <label class="interactive-card delay-2"
+                style="text-align: left; display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" id="sym-fa" style="transform: scale(1.5);">
+                <span style="font-size: 1.2rem; font-weight:500;">Fainting / Dizziness</span>
+            </label>
+        </div>
+
+        <div style="text-align: right; margin-top: 2rem;">
+            <button onclick="submitTriage()"
+                style="background: var(--risk-low); color: white; padding: 1rem 3rem; border: none; font-weight: bold; border-radius: 30px; cursor: pointer; font-size: 1.2rem; box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); animation: pulse 2s infinite;">
+                Submit & Check In
+            </button>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/kiosk.js') }}"></script>
+<script>
+    // Particle Network Animation
+    const canvas = document.getElementById('bg-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        const particleCount = 50;
+        const connectionDistance = 120;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(6, 182, 212, 0.4)'; // Cyan
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < particles.length; i++) {
+                let p1 = particles[i];
+                p1.update();
+                p1.draw();
+                for (let j = i + 1; j < particles.length; j++) {
+                    let p2 = particles[j];
+                    let dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+                    if (dist < connectionDistance) {
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+</script>
+{% endblock %}

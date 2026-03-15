@@ -1,0 +1,27 @@
+[
+  {
+    "id": "chest_pain",
+    "text": "Chest Pain Protocol: 1. ECG within 10 mins. 2. Aspirin 325mg if not contraindicated. 3. Nitroglycerin for active pain. 4. Troponin I/T levels.",
+    "title": "Chest Pain / ACS"
+  },
+  {
+    "id": "sepsis",
+    "text": "Sepsis Bundle: 1. Measure Lactate. 2. Obtain Blood Cultures before antibiotics. 3. Administer Broad Spectrum Antibiotics. 4. IV Fluids 30ml/kg for hypotension.",
+    "title": "Sepsis"
+  },
+  {
+    "id": "stroke",
+    "text": "Stroke Protocol: 1. Head CT (Non-contrast) immediately. 2. Check Glucose. 3. NIHSS Score assessment. 4. tPA evaluation if <4.5 hours onset.",
+    "title": "Acute Stroke"
+  },
+  {
+    "id": "asthma",
+    "text": "Asthma/COPD Exacerbation: 1. Nebulized Albuterol/Ipratropium. 2. Corticosteroids (Prednisone/Solu-Medrol). 3. Supplemental Oxygen to maintain SpO2 > 90%.",
+    "title": "Respiratory Distress"
+  },
+  {
+    "id": "trauma",
+    "text": "Trauma Protocol: 1. Primary Survey (ABCDE). 2. C-Spine Immobilization. 3. Stop major bleeding (Tourniquet/Pressure). 4. Fast Scan for internal bleeding.",
+    "title": "Trauma / ATLS"
+  }
+]

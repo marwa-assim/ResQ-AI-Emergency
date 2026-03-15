@@ -1,0 +1,23 @@
+RED (Immediate):
+- SpO2 < 90
+- Heart rate > 130 AND (chest pain OR breathing difficulty)
+- Fainting AND age ≥ 60
+- Active bleeding AND heart rate > 120
+
+ORANGE (Very Urgent):
+- SpO2 between 90 and 93
+- Heart rate ≥ 110
+- Temperature ≥ 39 AND breathing difficulty
+- Age ≥ 65 AND (chest pain OR breathing difficulty)
+- Ambulance arrival AND any symptom present
+
+YELLOW (Can Wait):
+- Temperature between 37.5 and 38.9
+- Heart rate between 100 and 109
+- Chronic disease with stable vitals
+
+GREEN (Low Risk):
+- SpO2 ≥ 95
+- Heart rate 60–99
+- Temperature < 37.5
+- No major symptoms

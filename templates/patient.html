@@ -1,0 +1,2703 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Mobile First -->
+  <title>ResQ Connect | Patient Portal</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --surface-glass: rgba(30, 41, 59, 0.7);
+      --accent-cyan: #06b6d4;
+      --risk-critical: #ef4444;
+      --risk-high: #f97316;
+      --risk-low: #22c55e;
+      --text-primary: #f1f5f9;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #1e293b, #0f172a);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Modern SOS Bar */
+    .sos-bar {
+      background: rgba(69, 10, 10, 0.9);
+      backdrop-filter: blur(5px);
+      border-bottom: 3px solid #ef4444;
+      padding: 1rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-panic {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      color: white;
+      border: none;
+      padding: 0.8rem 2rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-dispatch {
+      background: rgba(0, 0, 0, 0.3);
+      color: #ef4444;
+      border: 2px solid #ef4444;
+      padding: 0.8rem 1.5rem;
+      border-radius: 50px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-dispatch:active {
+      transform: scale(0.95);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 600px;
+      width: 90%;
+      margin: 2rem auto;
+      flex: 1;
+      box-sizing: border-box;
+      animation: fadeUp 0.6s ease-out;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      letter-spacing: -1px;
+      text-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+
+    .wait-badge {
+      display: inline-block;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    /* Cards */
+    .card-btn {
+      background: var(--surface-glass);
+      backdrop-filter: blur(10px);
+      padding: 1.8rem;
+      border-radius: 20px;
+      margin-bottom: 1.2rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.3rem;
+    }
+
+    .card-desc {
+      font-size: 1rem;
+      color: #cbd5e1;
+    }
+
+    .card-btn:hover {
+      transform: translateY(-4px);
+      background: rgba(30, 41, 59, 0.95);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .card-btn:active {
+      transform: scale(0.98);
+    }
+
+    .icon-box {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-right: 1.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    /* AI Wizard */
+    .ai-assist-box {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(15, 23, 42, 0.9));
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      border-radius: 24px;
+      padding: 2.5rem;
+      text-align: center;
+      margin-bottom: 2.5rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ai-avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 4px solid var(--accent-cyan);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+      margin: 0 auto 1.5rem auto;
+      display: block;
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+
+      100% {
+        transform: translateY(0px);
+      }
+    }
+
+    .ai-input {
+      width: 100%;
+      padding: 1.5rem;
+      box-sizing: border-box;
+      /* Fix for overflow/border touch */
+      background: rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 60px;
+      color: white;
+      font-size: 1.3rem;
+      margin-top: 1.5rem;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .ai-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      background: rgba(0, 0, 0, 0.6);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+    }
+
+    .guide-step {
+      margin-top: 1.5rem;
+      animation: fadeUp 0.5s;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-cyan);
+      color: #0f172a;
+      font-weight: bold;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Forms */
+    input.form-control {
+      width: 100%;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #475569;
+      color: white;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      box-sizing: border-box;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 1.2rem;
+      background: linear-gradient(90deg, #06b6d4, #0891b2);
+      color: white;
+      font-weight: 800;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 1rem;
+      box-shadow: 0 10px 20px rgba(6, 182, 212, 0.3);
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* New Modern Styles */
+    .glass-panel,
+    .ai-assist-box,
+    .card-btn,
+    .sos-bar {
+      background: rgba(15, 23, 42, 0.6) !important;
+      backdrop-filter: blur(16px) !important;
+      border: 1px solid rgba(6, 182, 212, 0.3) !important;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.1), inset 0 0 20px rgba(6, 182, 212, 0.05) !important;
+      transition: all 0.3s;
+    }
+
+    .floating-btn {
+      background: rgba(15, 23, 42, 0.8);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-cyan);
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+      animation: float 4s ease-in-out infinite;
+      transition: all 0.3s;
+    }
+
+    .floating-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.8);
+      background: var(--accent-cyan);
+      color: #000;
+    }
+
+    .modern-history-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .modern-history-card:hover {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--accent-cyan);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modern-history-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-cyan);
+    }
+
+    .title-glow {
+      text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+    }
+  </style>
+
+  <!-- Google Translate -->
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'ar,en,fr,es,ur,hi,zh-CN,de,tr,ru,id,ms,fa,bn,pt',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+  <style>
+    #translate-bar {
+      position: fixed; top: 12px; right: 16px; z-index: 9100;
+      background: rgba(15,23,42,0.9); backdrop-filter: blur(14px);
+      border: 1px solid rgba(6,182,212,0.35); border-radius: 30px;
+      padding: 5px 14px; display: flex; align-items: center; gap: 8px;
+      font-family: 'Outfit', sans-serif; font-size: 0.8rem; color: #94a3b8;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #translate-bar i { color: #06b6d4; font-size: 0.95rem; }
+    .goog-te-gadget-simple { background: transparent !important; border: none !important; font-size: 0.8rem !important; padding: 0 !important; }
+    .goog-te-gadget-simple .goog-te-menu-value span { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple a, .goog-te-gadget-simple a:visited { color: #e2e8f0 !important; }
+        .goog-te-gadget-simple .goog-te-menu-value { color: #e2e8f0 !important; }
+    .goog-te-gadget-simple img { display: none !important; }
+    .goog-te-banner-frame { display: none !important; }
+    body { top: 0 !important; }
+  </style>
+</head>
+
+<body>
+  <!-- Language Switcher -->
+  <div id="translate-bar">
+    <i class="fa-solid fa-language"></i>
+    <div id="google_translate_element"></div>
+  </div>
+
+  <!-- Background Particles -->
+  <canvas id="bg-canvas"
+    style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none;"></canvas>
+
+  <!-- SOS BAR -->
+  <div class="sos-bar">
+    <a href="tel:911" class="btn-panic"><i class="fa-solid fa-phone"></i> CALL 911</a>
+    <button class="btn-dispatch" onclick="dispatchAmbulance()"><i class="fa-solid fa-truck-medical"></i> SEND
+      AMBULANCE</button>
+  </div>
+
+  <!-- FIXED ACCESSIBILITY OVERLAY -->
+  <div
+    style="position: fixed; top: 6rem; right: 1.5rem; display: flex; flex-direction: column; gap: 1rem; z-index: 2000;">
+    <button id="btn-blind-mode" onclick="voice.toggleBlindMode()" class="floating-btn" aria-label="Toggle Blind Mode">
+      <i class="fa-solid fa-eye-slash"></i>
+    </button>
+    <button id="btn-mic-mode" onclick="voice.toggleMic()" class="floating-btn" aria-label="Toggle Voice Command">
+      <i class="fa-solid fa-microphone"></i>
+    </button>
+    <button id="btn-sign-mode" onclick="window.location.href='/sign_language'" class="floating-btn" aria-label="Sign Language Mode"
+      title="Sign Language - talk to AI with your hands"
+      style="background:rgba(56,189,248,0.12); border-color:#38bdf8; font-size:1.3rem;">
+      🤟
+    </button>
+  </div>
+
+  <!-- ============================================================
+       SIGN LANGUAGE DRAWER - Embedded in Patient Portal
+       Full-word gesture recognition → AI Nurse
+  ============================================================ -->
+  <div id="sl-drawer" style="
+    position: fixed; right: -420px; top: 0; bottom: 0; width: min(420px, 100vw);
+    background: rgba(6,13,26,0.97);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(56,189,248,0.2);
+    box-shadow: -10px 0 60px rgba(0,0,0,0.6);
+    z-index: 5000;
+    transition: right 0.4s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column;
+    font-family: 'Outfit', sans-serif;
+  ">
+    <!-- Header -->
+    <div style="padding: 1rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink:0;">
+      <div>
+        <div style="font-weight:800; font-size:1.1rem; color:#38bdf8;">🤟 Sign Language Mode</div>
+        <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">Show hand gesture → AI reads it for you</div>
+      </div>
+      <button onclick="signLang.toggle()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+        color:#94a3b8; border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:1.1rem;">✕</button>
+    </div>
+
+    <!-- Camera View -->
+    <div style="position:relative; flex-shrink:0;">
+      <video id="sl-video" style="width:100%; height:220px; object-fit:cover; transform:scaleX(-1); display:block; background:#0f172a;"></video>
+      <canvas id="sl-canvas" style="position:absolute; top:0; left:0; width:100%; height:220px; transform:scaleX(-1);"></canvas>
+
+      <!-- Loading overlay -->
+      <div id="sl-loading" style="position:absolute; inset:0; background:rgba(6,13,26,0.9);
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem;">
+        <div style="width:36px; height:36px; border:3px solid rgba(56,189,248,0.2); border-top-color:#38bdf8;
+          border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+        <div style="font-size:0.8rem; color:#38bdf8; font-weight:600;">Loading AI Hand Model…</div>
+      </div>
+
+      <!-- Live gesture badge -->
+      <div id="sl-badge" style="position:absolute; top:8px; right:8px;
+        background:rgba(6,13,26,0.85); border:2px solid #38bdf8; border-radius:14px;
+        padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:700; color:#38bdf8;
+        display:flex; align-items:center; gap:6px;">
+        <div id="sl-dot" style="width:8px; height:8px; border-radius:50%; background:#64748b;"></div>
+        <span id="sl-badge-txt">No hand detected</span>
+      </div>
+    </div>
+
+    <!-- Detected Word Display -->
+    <div style="padding:0.8rem 1.2rem; border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0;">
+      <div style="font-size:0.68rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.4rem;">Detected Gesture</div>
+      <div id="sl-word-display" style="font-size:2rem; font-weight:900; color:#f1f5f9; min-height:2.6rem; letter-spacing:1px;">-</div>
+      <!-- Progress bar -->
+      <div style="margin-top:0.4rem; height:4px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+        <div id="sl-progress" style="height:100%; width:0%; background:linear-gradient(90deg,#38bdf8,#34d399); transition:width 0.1s;"></div>
+      </div>
+      <div style="font-size:0.7rem; color:#64748b; margin-top:4px;">Hold gesture for 1.5 seconds to confirm</div>
+    </div>
+
+    <!-- Gesture Guide -->
+    <div style="flex:1; overflow-y:auto; padding:0.8rem 1.2rem;">
+      <div style="font-size:0.68rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.7rem;">Gesture Dictionary</div>
+      <div id="sl-gesture-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem;"></div>
+
+      <!-- Last sent words -->
+      <div id="sl-history-section" style="margin-top:1rem; display:none;">
+        <div style="font-size:0.68rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">Sent to AI Nurse</div>
+        <div id="sl-history" style="display:flex; flex-wrap:wrap; gap:0.4rem;"></div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sl-gesture-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 0.5rem 0.6rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.75rem; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sl-gesture-card:hover { background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3); }
+    .sl-gesture-card.active {
+      background: rgba(56,189,248,0.15);
+      border-color: #38bdf8;
+    }
+    .sl-gesture-card .emoji { font-size: 1.2rem; }
+    .sl-gesture-card .label { font-weight: 700; color: #e2e8f0; display:block; }
+    .sl-gesture-card .hint { color: #64748b; font-size:0.65rem; display:block; line-height:1.3; }
+  </style>
+
+  <div class="container" id="main-dashboard">
+    <header class="header" style="text-align:center; padding-top:1rem; margin-bottom:2rem;">
+      <div class="logo" style="display:flex; flex-direction:column; align-items:center; gap:10px; perspective: 1000px;">
+        <img src="/static/ResQ%20AI%20Logo.png"
+          style="width: 100%; max-width: 300px; height: auto; filter: drop-shadow(0 0 15px rgba(6,182,212,0.6)); animation: logo3d 6s ease-in-out infinite;">
+        <div style="font-size: 2rem; font-weight: 700; color: white;">ResQ Connect</div>
+        <div style="color: #94a3b8; font-size: 1.1rem; letter-spacing: 1px; margin-top: -5px;">Pre-Hospital Emergency
+          Portal</div>
+      </div>
+      <style>
+        @keyframes logo3d {
+          0% {
+            transform: rotateY(-15deg) translateY(0);
+          }
+
+          50% {
+            transform: rotateY(15deg) translateY(-8px);
+          }
+
+          100% {
+            transform: rotateY(-15deg) translateY(0);
+          }
+        }
+      </style>
+    </header>
+
+    <!-- AI Nurse Section -->
+    <div class="ai-assist-box" id="ai-box">
+      <img src="/static/ai_nurse.png" class="ai-avatar" alt="AI Nurse">
+      <h2 style="color:white; margin:0; font-size:1.8rem;">Hi, I'm Nurse Sara.</h2>
+      <p style="color:#94a3b8; font-size:1.1rem; margin-top:0.5rem; line-height:1.5;">I'm here to guide you. Tell me
+        what's happening.</p>
+
+      <!-- CHAT LOG -->
+      <div id="ai-chat-log" style="max-height:260px;overflow-y:auto;margin-bottom:0.8rem;padding:12px;background:rgba(0,0,0,0.25);border-radius:12px;display:flex;flex-direction:column;gap:10px;border:1px solid rgba(255,255,255,0.06);">
+        <!-- welcome bubble -->
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0284c7);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">👩‍⚕️</div>
+          <div style="max-width:82%;padding:10px 14px;border-radius:14px 14px 14px 4px;background:linear-gradient(135deg,rgba(6,182,212,.18),rgba(2,132,199,.12));border:1px solid rgba(6,182,212,.3);color:#e2e8f0;font-size:0.88rem;line-height:1.5;">
+            Hi! I'm <strong>Nurse Sara</strong>, your AI medical assistant. Tap a quick-action below or type any medical question - I'll guide you step by step. 🩺
+          </div>
+        </div>
+      </div>
+
+      <!-- EMERGENCY QUICK-CHIPS -->
+      <div id="emergency-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0.85rem;">
+        <button onclick="searchFirstAid('bleeding')"       style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(239,68,68,.5);background:rgba(239,68,68,.12);color:#fca5a5;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(239,68,68,.28)'" onmouseout="this.style.background='rgba(239,68,68,.12)'">🩸 Bleeding</button>
+        <button onclick="searchFirstAid('cpr')"            style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(6,182,212,.5);background:rgba(6,182,212,.12);color:#67e8f9;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(6,182,212,.28)'" onmouseout="this.style.background='rgba(6,182,212,.12)'">🫀 CPR</button>
+        <button onclick="searchFirstAid('choking')"        style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.12);color:#fde68a;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.28)'" onmouseout="this.style.background='rgba(251,191,36,.12)'">😮 Choking</button>
+        <button onclick="searchFirstAid('burn')"           style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(249,115,22,.5);background:rgba(249,115,22,.12);color:#fdba74;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(249,115,22,.28)'" onmouseout="this.style.background='rgba(249,115,22,.12)'">🔥 Burns</button>
+        <button onclick="searchFirstAid('stroke')"         style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(168,85,247,.5);background:rgba(168,85,247,.12);color:#d8b4fe;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(168,85,247,.28)'" onmouseout="this.style.background='rgba(168,85,247,.12)'">🧠 Stroke</button>
+        <button onclick="searchFirstAid('seizure')"        style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#fef08a;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(234,179,8,.28)'" onmouseout="this.style.background='rgba(234,179,8,.12)'">⚡ Seizure</button>
+        <button onclick="searchFirstAid('allergic reaction')" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(34,197,94,.5);background:rgba(34,197,94,.12);color:#86efac;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(34,197,94,.28)'" onmouseout="this.style.background='rgba(34,197,94,.12)'">⚠️ Allergy</button>
+      </div>
+
+      <!-- INPUT ROW -->
+      <div style="position:relative;display:flex;gap:8px;align-items:center;">
+        <input type="text" class="ai-input" id="ai-text-input" placeholder="Ask any medical question or describe emergency..."
+          onkeydown="handleInputKey(event)" style="flex:1;padding-right:100px;">
+        <!-- Mic button -->
+        <button onclick="voice.toggleDictation()" title="Voice input"
+          style="position:absolute;right:55px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--accent-cyan);font-size:1.4rem;cursor:pointer;opacity:0.8;transition:all 0.2s;">
+          <i class="fa-solid fa-microphone"></i>
+        </button>
+        <!-- Sign Language toggle -->
+        <button id="sl-inline-btn" onclick="window.location.href='/sign_language'" title="Open Sign Language Page"
+          style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--accent-cyan);font-size:1.4rem;cursor:pointer;opacity:0.8;transition:all 0.2s;">🤟</button>
+      </div>
+      <div id="guide-container"></div>
+    </div>
+
+    <h2 style="margin-bottom:1.5rem; font-size:1.5rem; color: var(--text-primary); text-align:center;">Start Self-Check
+      In</h2>
+
+    <div class="card-btn" onclick="goToStep(2)">
+      <div style="display:flex; align-items:center;">
+        <div class="icon-box" style="color:var(--risk-critical);"><i class="fa-solid fa-heart-crack"></i></div>
+        <div>
+          <div class="card-title">Chest Pain</div>
+          <div class="card-desc">Pressure, tightness, heart issues</div>
+        </div>
+      </div>
+      <i class="fa-solid fa-chevron-right" style="color:#64748b;"></i>
+    </div>
+
+    <div class="card-btn" onclick="goToStep(2)">
+      <div style="display:flex; align-items:center;">
+        <div class="icon-box" style="color:var(--risk-high);"><i class="fa-solid fa-lungs"></i></div>
+        <div>
+          <div class="card-title">Trouble Breathing</div>
+          <div class="card-desc">Shortness of breath, asthma</div>
+        </div>
+      </div>
+      <i class="fa-solid fa-chevron-right" style="color:#64748b;"></i>
+    </div>
+
+    <div class="card-btn" onclick="goToStep(2)">
+      <div style="display:flex; align-items:center;">
+        <div class="icon-box" style="color:var(--risk-critical);"><i class="fa-solid fa-droplet"></i></div>
+        <div>
+          <div class="card-title">Bleeding / Injury</div>
+          <div class="card-desc">Cuts, falls, accidents</div>
+        </div>
+      </div>
+      <i class="fa-solid fa-chevron-right" style="color:#64748b;"></i>
+    </div>
+
+    <!-- COMPETITION INNOVATION: DEVICES TAB -->
+    <div style="margin-top:2rem; border-top:1px solid #334; padding-top:1rem;">
+      <h3 style="color:var(--text-primary); text-align:center; font-size:1.2rem;">Advanced Connectivity</h3>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;">
+        <button onclick="toggleDevices()" class="btn-dispatch"
+          style="border-color:#06b6d4; color:#06b6d4; justify-content:center;">
+          <i class="fa-solid fa-watch"></i> My Devices
+        </button>
+        <button onclick="toggleMesh()" id="mesh-btn" class="btn-dispatch"
+          style="border-color:#22c55e; color:#22c55e; justify-content:center;">
+          <i class="fa-solid fa-wifi"></i> <span id="mesh-txt">5G: Online</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY SECTION -->
+  <div style="margin-top:3rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:2rem;">
+    <h3 class="title-glow" style="text-align:center; font-size:1.5rem; margin-bottom:2rem;"><i
+        class="fa-solid fa-clock-rotate-left"></i> Emergency History</h3>
+    <!-- Grid Layout -->
+    <div id="history-list"
+      style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+  </div>
+
+
+  <!-- History Detail Modal -->
+  <div id="history-detail-modal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+    <div class="glass-panel"
+      style="width:90%; max-width:500px; padding:2rem; border-radius:24px; position:relative; animation: fadeUp 0.3s ease-out;">
+      <button onclick="document.getElementById('history-detail-modal').style.display='none'"
+        style="position:absolute; top:15px; right:15px; background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+      <h2 id="hist-modal-title" style="color:var(--accent-cyan); margin-top:0;">Emergency Details</h2>
+      <div id="hist-modal-content" style="color: #ccc; line-height: 1.6;">
+        <!-- Content -->
+      </div>
+      <div style="margin-top:2rem; text-align:right;">
+        <button onclick="document.getElementById('history-detail-modal').style.display='none'" class="modern-btn"
+          style="background:var(--accent-cyan); color:black;">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Volunteer Notification Toast -->
+  <div id="vol-toast"
+    style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(6, 182, 212, 0.9); backdrop-filter:blur(10px); color:white; padding:1rem 2rem; border-radius:50px; z-index:9999; box-shadow:0 0 20px rgba(6,182,212,0.4); border:1px solid white;">
+    <div style="display:flex; align-items:center; gap:1rem;">
+      <div
+        style="background:white; color:var(--accent-cyan); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">
+        <i class="fa-solid fa-running"></i>
+      </div>
+      <div>
+        <div style="font-weight:bold; font-size:1.1rem;">Volunteer Responder Incoming!</div>
+        <div style="font-size:0.9rem; opacity:0.9;">A nearby certified hero is en route. (2 mins away)</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showVolunteerToast() {
+      const t = document.getElementById('vol-toast');
+      t.style.display = 'block';
+      t.style.animation = 'fadeUp 0.5s ease-out';
+      // Sound
+      new Audio('https://assets.mixkit.co/active_storage/sfx/995/995-preview.mp3').play().catch(e => { });
+    }
+  </script>
+
+  <!-- Check-In Form (Step 2) -->
+  <div class="container" id="step-checkin" style="display: none;">
+    <h2 class="title-glow" style="text-align:center; color: var(--accent-cyan);">Patient Check-In</h2>
+    <p style="text-align:center; color:#94a3b8; margin-bottom:2rem;">Please confirm your details for Triage.</p>
+
+    <div class="glass-panel" style="padding: 2rem; border-radius: 20px;">
+      <label style="color:#cbd5e1; margin-bottom:0.5rem; display:block;">Full Name</label>
+      <input type="text" id="ci-name" class="form-control" placeholder="Enter your name">
+
+      <label style="color:#cbd5e1; margin-bottom:0.5rem; display:block;">Primary Symptom</label>
+      <input type="text" id="ci-symptom" class="form-control" placeholder="e.g. Chest Pain">
+
+      <label style="color:#cbd5e1; margin-bottom:0.5rem; display:block;">Estimated Arrival (Minutes)</label>
+      <input type="number" id="ci-eta" class="form-control" value="15">
+
+      <button onclick="submitCheckIn()" class="action-btn">
+        <i class="fa-solid fa-check-circle"></i> CHECK IN NOW
+      </button>
+
+      <button onclick="location.reload()"
+        style="width:100%; padding:1rem; background:transparent; border:none; color:#94a3b8; margin-top:1rem; cursor:pointer;">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- DEVICES VIEW (Hidden) -->
+  <div class="container" id="step-devices" style="display: none;">
+    <h2 class="title-glow" style="text-align:center;"><i class="fa-solid fa-link"></i> Linked Devices</h2>
+    <p style="text-align:center; color:#94a3b8; margin-bottom:2rem;">Manage your bio-metric and telemetry sensors.</p>
+
+    <!-- DEVICE 1: SMART WATCH -->
+    <div class="card-btn" style="cursor:default; display:block;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <div style="font-weight:bold; color:var(--text-primary);"><i class="fa-solid fa-stopwatch"></i> Apex Watch Ultra
+        </div>
+        <div style="color:#22c55e;">Connected</div>
+      </div>
+      <div style="background:rgba(0,0,0,0.3); height:60px; border-radius:8px; position:relative; overflow:hidden;">
+        <!-- Simulated ECG -->
+        <svg viewBox="0 0 100 20" style="width:100%; height:100%; stroke:#22c55e; fill:none; stroke-width:2px;">
+          <path d="M0,10 L10,10 L15,5 L20,15 L25,10 L30,10 L35,10 L40,10 L45,5 L50,15 L55,10 L100,10">
+            <animate attributeName="d"
+              from="M0,10 L10,10 L15,5 L20,15 L25,10 L30,10 L35,10 L40,10 L45,5 L50,15 L55,10 L100,10"
+              to="M-10,10 L0,10 L5,5 L10,15 L15,10 L20,10 L25,10 L30,10 L35,5 L40,15 L45,10 L90,10" dur="1s"
+              repeatCount="indefinite" />
+          </path>
+        </svg>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:0.8rem; color:#888;">HEART RATE</div>
+          <div style="font-size:1.5rem; font-weight:bold;">72 <span style="font-size:1rem; color:#888;">bpm</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVICE 2: CAR COMPUTER -->
+    <div class="card-btn" style="cursor:default; display:block; margin-top:1rem;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <div style="font-weight:bold; color:var(--text-primary);"><i class="fa-solid fa-car"></i> Tesla Model Y</div>
+        <div style="color:#22c55e;">Standby</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.8rem; color:#888;">G-FORCE SENSOR</div>
+          <div style="font-size:1.5rem; font-weight:bold;">0.1 <span style="font-size:1rem; color:#888;">g</span></div>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="closeDevices()"
+      style="margin-top:2rem; width:100%; background:transparent; border:1px solid #666; color:white; padding:12px; border-radius:8px;">Back
+      to Home</button>
+  </div>
+
+  <!-- Tracking View (Replaces Content) -->
+  <div class="container" id="step-track" style="display: none; text-align: center;">
+    <h2 style="color: var(--risk-critical); font-size: 2.5rem; animation: pulse 2s infinite; margin-bottom: 2rem;"><i
+        class="fa-solid fa-truck-medical"></i> AMBULANCE EN ROUTE</h2>
+
+    <div
+      style="background: rgba(239, 68, 68, 0.15); border: 2px solid var(--risk-critical); border-radius: 24px; padding: 1.5rem; margin-top: 1rem; backdrop-filter: blur(10px); box-shadow: 0 0 40px rgba(239,68,68,0.2);">
+      <div style="font-size: 4rem; font-weight: 800; color: white;">ETA: <span id="track-eta">08</span><span
+          style="font-size: 1.5rem;">min</span></div>
+      <p style="color: #cbd5e1; font-size: 1.2rem; margin-top: 0.5rem; margin-bottom: 1.5rem;">Unit #42 is heading to
+        your location.</p>
+
+      <!-- Live Map Tracking View -->
+      <div id="ambulance-live-map" style="width:100%; height:250px; border-radius:16px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); margin-bottom:1.5rem; position:relative; background-color:#222;">
+          <iframe id="live-map-iframe" width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=Bahrain&t=m&z=13&output=embed&iwloc=Near"></iframe>
+          <div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.8); color:white; padding:5px 10px; border-radius:10px; font-size:0.8rem; font-family:'Inter', sans-serif;" id="live-gps-text">
+              <i class="fa-solid fa-satellite-dish pulse"></i> AWAITING GPS...
+          </div>
+      </div>
+
+      <!-- End Map Views -->
+
+      <div
+        style="margin-top: 1rem; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+        <div style="width: 60%; height: 100%; background: var(--risk-critical); animation: load 2s infinite;"></div>
+      </div>
+    </div>
+
+    <p style="margin-top: 2rem; color: #94a3b8; font-size: 1.1rem;">Please ensure your door is unlocked.</p>
+
+    <div style="margin-top: 2rem;">
+      <button id="btn-cancel-request" class="btn-dispatch"
+        style="margin: 0 auto; border-color: #64748b; color: #cbd5e1;" onclick="cancelDispatch()">Cancel
+        Request</button>
+    </div>
+  </div>
+
+  <script>
+    // ---------------------------------------------
+    // SOS Logic
+    // ---------------------------------------------
+    // ---------------------------------------------
+    // Initialization & State Persistence
+    // ---------------------------------------------
+    let checkInterval = null;
+    let mySosId = localStorage.getItem('my_sos_id');
+
+    window.onload = function () {
+      if (localStorage.getItem('ambulance_dispatched') === 'true') {
+        showTrackingMode();
+      }
+      
+      // Intercept Sign Language Data
+      const signedWord = localStorage.getItem('signLanguageInput');
+      if (signedWord && document.getElementById('ai-text-input')) {
+         localStorage.removeItem('signLanguageInput');
+         document.getElementById('ai-text-input').value = signedWord;
+         // Trigger AI visually and via voice
+         if (voice) {
+             voice.speak("Sign Language recognized. Opening " + signedWord + " protocol.");
+             searchFirstAid(signedWord);
+         }
+      }
+    };
+
+    // ---------------------------------------------
+    // SOS Logic
+    // ---------------------------------------------
+    async function dispatchAmbulance() {
+      if (voice) voice.triggerAIAction("Dispatched. Help is on the way.", "ambulance_confirmed");
+
+      const btn = document.querySelector('.btn-dispatch');
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GETTING LOCATION...';
+
+      // ── Step 1: Try to get real GPS ──
+      if (!navigator.geolocation) {
+        _showLocationFallbackModal("Your browser does not support GPS location.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          // ✅ Got real GPS — show confirmation before sending
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const acc = Math.round(position.coords.accuracy);
+          _confirmAndDispatch(lat, lng, acc);
+        },
+        async (error) => {
+          // ❌ GPS failed — show warning, never silently use fallback
+          let reason = "Location access was denied or timed out.";
+          if (error.code === 1) reason = "You denied location access. Please allow it in your browser settings.";
+          if (error.code === 2) reason = "GPS signal unavailable (try moving near a window).";
+          if (error.code === 3) reason = "Location request timed out. Your GPS may be slow indoors.";
+          _showLocationFallbackModal(reason);
+          if (btn) btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    }
+
+    function _confirmAndDispatch(lat, lng, accuracy) {
+      // Show a quick location confirmation so the user sees what's being sent
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+      modal.innerHTML = `
+        <div style="background:#0f172a;border:1px solid #06b6d4;border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:0 0 40px rgba(6,182,212,0.3);">
+          <div style="font-size:2.5rem;margin-bottom:12px;">📍</div>
+          <h3 style="color:#38bdf8;margin-bottom:8px;font-size:1.1rem;">Your Location Captured</h3>
+          <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:16px;">
+            GPS accuracy: ~${accuracy}m<br>
+            <span style="font-family:monospace;color:#e2e8f0;">${lat.toFixed(5)}, ${lng.toFixed(5)}</span>
+          </p>
+          <a href="https://maps.google.com/?q=${lat},${lng}" target="_blank"
+             style="display:inline-block;color:#06b6d4;font-size:0.8rem;margin-bottom:20px;text-decoration:underline;">
+            ✅ Verify on Google Maps →
+          </a>
+          <div style="display:flex;gap:10px;">
+            <button id="_confirm-loc-no" style="flex:1;padding:12px;border-radius:10px;background:rgba(100,116,139,0.2);border:1px solid #475569;color:#94a3b8;cursor:pointer;font-size:0.9rem;">
+              ✏️ Wrong location
+            </button>
+            <button id="_confirm-loc-yes" style="flex:1;padding:12px;border-radius:10px;background:linear-gradient(135deg,#06b6d4,#0284c7);border:none;color:white;cursor:pointer;font-weight:700;font-size:0.9rem;">
+              🚑 Send Ambulance
+            </button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+
+      document.getElementById('_confirm-loc-yes').onclick = async () => {
+        document.body.removeChild(modal);
+        await sendDispatchRequest(lat, lng);
+      };
+      document.getElementById('_confirm-loc-no').onclick = () => {
+        document.body.removeChild(modal);
+        _showLocationFallbackModal("You indicated the location was incorrect. Please retry or share your location manually.");
+        const btn = document.querySelector('.btn-dispatch');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+      };
+    }
+
+    function _showLocationFallbackModal(reason) {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+      modal.innerHTML = `
+        <div style="background:#0f172a;border:1px solid #ef4444;border-radius:16px;padding:28px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 40px rgba(239,68,68,0.3);">
+          <div style="font-size:2.5rem;margin-bottom:12px;">⚠️</div>
+          <h3 style="color:#f87171;margin-bottom:8px;font-size:1.1rem;">Could Not Get Your Location</h3>
+          <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:16px;">${reason}</p>
+          <p style="color:#64748b;font-size:0.78rem;margin-bottom:16px;">
+            <strong>To allow location:</strong> Click the 🔒 lock icon in your browser address bar → Site settings → Allow Location
+          </p>
+          <div style="display:flex;gap:10px;flex-direction:column;">
+            <button id="_loc-retry" style="padding:12px;border-radius:10px;background:linear-gradient(135deg,#06b6d4,#0284c7);border:none;color:white;cursor:pointer;font-weight:700;">
+              🔄 Try Again
+            </button>
+            <button id="_loc-dismiss" style="padding:10px;border-radius:10px;background:transparent;border:1px solid #475569;color:#64748b;cursor:pointer;font-size:0.85rem;">
+              Dismiss — I will call 911 directly
+            </button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+
+      document.getElementById('_loc-retry').onclick = () => {
+        document.body.removeChild(modal);
+        dispatchAmbulance();
+      };
+      document.getElementById('_loc-dismiss').onclick = () => {
+        document.body.removeChild(modal);
+      };
+    }
+
+    async function sendDispatchRequest(lat, lng) {
+      try {
+        const res = await axios.post('/api/emergency/dispatch', { lat: lat, lng: lng });
+        const sosId = res.data.id;
+
+        // Persist State
+        localStorage.setItem('ambulance_dispatched', 'true');
+        localStorage.setItem('my_sos_id', sosId);
+        mySosId = sosId;
+
+        // Show Tracking UI
+        showTrackingMode();
+
+      } catch (e) {
+        console.error(e);
+        const msg = "Dispatch Failed: " + (e.response?.data?.message || e.message || "Unknown Error");
+        alert(msg);
+        if (voice) voice.speak("Dispatch Error. System Offline.");
+        const btn = document.querySelector('.btn-dispatch');
+        if (btn) { btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE'; }
+      }
+    }
+
+    function showTrackingMode() {
+      // Keep SOS Bar visible but disable buttons to prevent double dispatch
+      // document.querySelector('.sos-bar').style.display = 'none'; // OLD
+      const btn = document.querySelector('.btn-dispatch');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> DISPATCHED';
+        btn.style.opacity = "0.5";
+        btn.style.cursor = "not-allowed";
+      }
+
+      // Hide Triage Cards Section
+      const triageCards = document.querySelectorAll('.card-btn, h2');
+      triageCards.forEach(el => {
+        if (!el.closest('.ai-assist-box') && !el.closest('#step-track')) el.style.display = 'none';
+      });
+
+      document.getElementById('step-track').style.display = 'block';
+
+      // Start Polling for Arrival (Real Logic)
+      if (mySosId) {
+          startTracking(mySosId);
+      } else {
+          console.error("No SOS ID to track.");
+      }
+    }
+
+    function cancelDispatch() {
+      if (confirm("Cancel Ambulance Request?")) {
+        localStorage.removeItem('ambulance_dispatched');
+        localStorage.removeItem('my_sos_id');
+        location.reload();
+      }
+    }
+
+    async function submitCheckIn() {
+      const name = document.getElementById('ci-name').value;
+      const symptom = document.getElementById('ci-symptom').value;
+      const eta = document.getElementById('ci-eta').value;
+
+      if (!name || !symptom) { alert("Please fill in Name and Symptoms."); return; }
+
+      try {
+        await axios.post('/api/incoming_self', {
+          name: name,
+          symptoms: symptom,
+          eta: eta
+        });
+
+        alert("✅ Hospital has been notified!\nWe will be expecting you in ~" + eta + " mins.");
+        location.reload(); // Reset to home
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    // ---------------------------------------------
+    // AI Logic (Visual & Animated)
+    // ---------------------------------------------
+    // ---------------------------------------------
+    // ResQ-Assist: Interactive Medical Device Engine
+    // ---------------------------------------------
+    // ---------------------------------------------
+    // ResQ-Assist: Dynamic AI Engine
+    // ---------------------------------------------
+    // Protocols are now fetched Real-Time from the AI Copilot on the Server.
+    const RESQ_PROTOCOLS = {};
+
+
+    // ---------------------------------------------
+    // ResQ Voice Core (Accessibility)
+    // ---------------------------------------------
+    class ResQVoice {
+      constructor() {
+        this.synth = window.speechSynthesis;
+        this.recognition = null;
+        this.isBlindMode = false;
+        this.isListening = false;
+
+        if ('webkitSpeechRecognition' in window) {
+          this.recognition = new webkitSpeechRecognition();
+          this.recognition.continuous = true;
+          this.recognition.interimResults = false;
+          this.recognition.lang = 'en-US';
+
+          this.recognition.onresult = (event) => {
+            const last = event.results.length - 1;
+            const command = event.results[last][0].transcript.trim().toLowerCase();
+            console.log("Voice Command:", command);
+            this.processCommand(command);
+          };
+          this.recognition.onerror = (e) => console.log("Mic Error", e);
+        }
+      }
+
+      toggleBlindMode() {
+        this.isBlindMode = !this.isBlindMode;
+        const btn = document.getElementById('btn-blind-mode');
+        if (this.isBlindMode) {
+          btn.style.background = "#22c55e"; // Green
+          this.speak("Vision Impaired Mode Active. I will read the screen for you.");
+          this.attachScreenReader();
+        } else {
+          btn.style.background = "rgba(255,255,255,0.1)";
+          this.speak("Voice Guidance Deactivated.");
+          this.detachScreenReader();
+        }
+      }
+
+      attachScreenReader() {
+        this.readerHandler = (e) => {
+          const tgt = e.target.closest('button, p, h1, h2, h3, a, input, select, textarea, .resq-btn');
+          if (tgt) {
+            let text = "";
+
+            // Priority 1: Aria Label
+            if (tgt.getAttribute('aria-label')) text = tgt.getAttribute('aria-label');
+            // Priority 2: Use Input Values/Placeholders
+            else if (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA') {
+              text = tgt.value ? `Input: ${tgt.value}` : `Input field. ${tgt.placeholder}`;
+            }
+            // Priority 3: Inner Text
+            else if (tgt.innerText && tgt.innerText.trim().length > 0) text = tgt.innerText;
+            // Priority 4: Alt Text (Images)
+            else if (tgt.alt) text = "Image: " + tgt.alt;
+
+            if (text && this.lastRead !== text) {
+              this.speak(text);
+              this.lastRead = text;
+
+              // Add a visual ring for accessibility focus
+              this.highlightElement(tgt);
+            }
+          }
+        };
+        document.body.addEventListener('mouseover', this.readerHandler);
+        document.body.addEventListener('focusin', this.readerHandler);
+      }
+
+      highlightElement(el) {
+        if (this.prevHighlight) this.prevHighlight.style.outline = "none";
+        el.style.outline = "3px solid #0f0";
+        this.prevHighlight = el;
+      }
+
+      detachScreenReader() {
+        if (this.readerHandler) {
+          document.body.removeEventListener('mouseover', this.readerHandler);
+          document.body.removeEventListener('focusin', this.readerHandler);
+        }
+        if (this.prevHighlight) this.prevHighlight.style.outline = "none";
+      }
+
+      toggleDictation() {
+        if (this.isListening && this.isDictating) {
+          this.recognition.stop();
+          this.isDictating = false;
+        } else {
+          this.recognition.start();
+          this.isListening = true;
+          this.isDictating = true;
+          // Update Nurse Input Icon
+          const inp = document.getElementById('ai-text-input');
+          if (inp) { inp.placeholder = "Listening..."; inp.focus(); }
+        }
+      }
+
+      toggleMic() {
+        if (!this.recognition) { alert("Browser does not support Voice."); return; }
+        const btn = document.getElementById('btn-mic-mode');
+
+        if (this.isListening) {
+          this.recognition.stop();
+          this.isListening = false;
+          btn.style.background = "rgba(255,255,255,0.1)";
+          btn.classList.remove('pulse-mic');
+        } else {
+          this.recognition.start();
+          this.isListening = true;
+          btn.style.background = "#ef4444"; // Red (Recording)
+          btn.classList.add('pulse-mic');
+          this.speak("Listening for commands.");
+        }
+      }
+
+      speak(text) {
+        // Placeholder for initial logic, overwritten by method below
+        // This chunk is purely to match the target content for replacement
+        if (this.synth.speaking) this.synth.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        // Set language from Google Translate selection
+        const _cm = document.cookie.match(/googtrans=\/[a-z-]+\/([a-z-]+)/i);
+        const _gl = { 'ar':'ar-SA','fr':'fr-FR','es':'es-ES','ur':'ur-PK','hi':'hi-IN','zh-CN':'zh-CN','de':'de-DE','tr':'tr-TR','ru':'ru-RU','id':'id-ID','ms':'ms-MY','fa':'fa-IR','bn':'bn-BD','pt':'pt-PT','en':'en-US' };
+        utter.lang = _cm ? (_gl[_cm[1]] || _cm[1]) : 'en-US';
+        const _vs = this.synth.getVoices();
+        const _v = _vs.find(v => v.lang === utter.lang) || _vs.find(v => v.lang.startsWith((_cm||['','en'])[1]));
+        if (_v) utter.voice = _v;
+        this.synth.speak(utter);
+      }
+
+      processCommand(cmd) {
+        // ── Navigation while protocol is active ──
+        if (resq && resq.active) {
+          if (cmd.includes("next") || cmd.includes("ok") || cmd.includes("done")) { resq.handleVoice("next"); return; }
+          if (cmd.includes("back") || cmd.includes("previous") || cmd.includes("no")) { resq.handleVoice("back"); return; }
+          if (cmd.includes("repeat") || cmd.includes("again") || cmd.includes("what")) { resq.handleVoice("repeat"); return; }
+          if (cmd.includes("stop") || cmd.includes("end") || cmd.includes("exit")) { resq.stop(); return; }
+        }
+
+        // ── Ambulance dispatch ──
+        if (cmd.includes("ambulance") || cmd.includes("dispatch")) {
+          if (typeof dispatchAmbulance === 'function') dispatchAmbulance();
+          return;
+        }
+
+        // ── Dictation into AI nurse input ──
+        if (this.isDictating) {
+          const inp = document.getElementById('ai-text-input');
+          if (inp) { inp.value = cmd; }
+          if (typeof searchFirstAid === 'function') searchFirstAid(cmd);
+          this.isDictating = false;
+          try { this.recognition.stop(); } catch(e) {}
+          return;
+        }
+
+        // ── Direct keyword triggers ──
+        if (typeof searchFirstAid === 'function') {
+          if (cmd.match(/cpr|cardiac|heart|chest|compres|arrest/)) { searchFirstAid('cpr'); return; }
+          if (cmd.match(/bleed|blood|cut|wound/))                  { searchFirstAid('bleeding'); return; }
+          if (cmd.match(/choke|choking|heimlich|airway/))           { searchFirstAid('choking'); return; }
+          if (cmd.match(/burn|fire|scald/))                         { searchFirstAid('burn'); return; }
+          if (cmd.match(/stroke|face|slur/))                        { searchFirstAid('stroke'); return; }
+          if (cmd.match(/seiz|convuls|epilep/))                     { searchFirstAid('seizure'); return; }
+          if (cmd.match(/allerg|epipen|anaphyl/))                   { searchFirstAid('allergy'); return; }
+          if (cmd.match(/help|rescue|emergency/))                   { searchFirstAid('cpr'); return; }
+        }
+      }
+
+
+      triggerAIAction(response, actionKey) {
+        // 1. VISUAL FEEDBACK (Real Chat UI)
+        const log = document.getElementById('ai-chat-log');
+        if (log) {
+          // User Message (Inferred)
+          const userMsg = document.createElement('div');
+          userMsg.style.cssText = "align-self: flex-end; background: #334155; color: white; padding: 8px 12px; border-radius: 12px 12px 0 12px; max-width: 80%; font-size: 0.9rem;";
+          userMsg.innerText = actionKey === 'ambulance' ? "Call Ambulance" : "Protocol: " + actionKey;
+          log.appendChild(userMsg);
+
+          // AI Response
+          const aiMsg = document.createElement('div');
+          aiMsg.style.cssText = "align-self: flex-start; background: var(--accent-cyan); color: black; padding: 8px 12px; border-radius: 12px 12px 12px 0; max-width: 80%; font-size: 0.9rem; font-weight: bold;";
+          aiMsg.innerText = "Nurse Sara: " + response;
+          log.appendChild(aiMsg);
+
+          // Auto Scroll
+          log.scrollTop = log.scrollHeight;
+        }
+
+        // 2. AUDIO RESPONSE (Female Voice)
+        // Check if this action triggers a protocol start, if so, wait to speak until protocol renders
+        // Actually, we speak the response FIRST ("Starting CPR"), then the protocol renders and speaks Step 1.
+        // We need to chain them or let the queue handle it. SpeechSynthesis has a queue, but we want mic logic.
+        this.speak(response);
+
+        // 3. EXECUTE ACTION (Real App Logic)
+        if (actionKey === 'ambulance') {
+          dispatchAmbulance();
+        } else if (actionKey === 'ambulance_confirmed') {
+          // Already handled
+        } else {
+          searchFirstAid(actionKey); // Opens specific protocol
+        }
+      }
+
+      speak(text) {
+        if (this.synth.speaking) this.synth.cancel();
+
+        // 1. PAUSE LISTENING (Prevent Echo)
+        if (this.isListening) {
+          this.recognition.stop();
+          this.wasListening = true;
+        }
+
+        const utter = new SpeechSynthesisUtterance(text);
+
+        // ── Detect active Google Translate language from cookie ──
+        const gtLangMap = {
+          'ar':'ar-SA','fr':'fr-FR','es':'es-ES','ur':'ur-PK','hi':'hi-IN',
+          'zh-CN':'zh-CN','de':'de-DE','tr':'tr-TR','ru':'ru-RU','id':'id-ID',
+          'ms':'ms-MY','fa':'fa-IR','bn':'bn-BD','pt':'pt-PT','en':'en-US'
+        };
+        const cookieMatch = document.cookie.match(/googtrans=\/[a-z-]+\/([a-z-]+)/i);
+        const gtCode = cookieMatch ? cookieMatch[1].toLowerCase() : 'en';
+        const speechLang = gtLangMap[gtCode] || (gtCode + '-' + gtCode.toUpperCase());
+        utter.lang = speechLang;
+
+        // ── Select best voice for the detected language ──
+        const voices = this.synth.getVoices();
+        // Priority: 1) female voice for target lang, 2) any female/Zira voice, 3) male for target lang
+        const femaleKeywords = ['female','zira','google uk english female','google us english','samantha','victoria','karen','moira','tessa','fiona'];
+        const isFemale = v => femaleKeywords.some(k => v.name.toLowerCase().includes(k));
+        const langVoice = voices.find(v => v.lang === speechLang && isFemale(v))
+            || voices.find(v => v.lang.startsWith(gtCode) && isFemale(v))
+            || voices.find(v => isFemale(v))          // any female voice (keep lang tag for pronunciation)
+            || voices.find(v => v.lang === speechLang); // last resort: male for target lang
+        if (langVoice) utter.voice = langVoice;
+        utter.rate = 1.1;
+        utter.pitch = 1.0;
+
+        // 2. RESUME LISTENING (The "Handshake")
+        const resumeMic = () => {
+          console.log("Speech Finished. Resuming Mic...");
+          if (this.wasListening || resq.active) {
+            try {
+              this.recognition.start();
+              this.isListening = true;
+              this.speak_visuals(true);
+              resq.playPing(); // AUDITORY CUE: "I'm listening now"
+            } catch (e) {
+              // Ignore "already started" errors
+              if (e.name !== 'InvalidStateError') console.log("Mic restart error", e);
+            }
+          }
+        };
+
+        utter.onend = resumeMic;
+
+        // 3. SAFETY NET (If browser speech hangs, force resume after expected duration)
+        // Avg reading speed ~ 4 chars/100ms. + 1s buffer.
+        const safeDuration = (text.length * 80) + 1500;
+        setTimeout(() => {
+          if (!this.isListening && (this.wasListening || resq.active)) resumeMic();
+        }, safeDuration);
+
+        this.synth.speak(utter);
+      }
+
+      speak_visuals(active) {
+        const btn = document.getElementById('btn-mic-mode');
+        if (active) {
+          btn.style.background = "#ef4444";
+          btn.classList.add('pulse-mic');
+        } else {
+          btn.style.background = "rgba(255,255,255,0.1)";
+          btn.classList.remove('pulse-mic');
+        }
+      }
+    }
+    const voice = new ResQVoice();
+
+    class ResQEngine {
+      constructor() {
+        this.active = false;
+        this.audioCtx = null;
+        this.oscillator = null;
+        this.interval = null;
+        this.currentProtocol = null;
+        this.currentStepId = null;
+      }
+
+
+      initAudio() {
+        if (!this.audioCtx) {
+          this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioCtx.state === 'suspended') {
+          this.audioCtx.resume();
+        }
+      }
+
+      playTone() {
+        if (!this.audioCtx) return;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, this.audioCtx.currentTime); // High pitch medical beep
+        osc.frequency.exponentialRampToValueAtTime(440, this.audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.5, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.1);
+        this.pulseUI();
+      }
+
+      playPing() {
+        // Soft "Listening" Ping
+        if (!this.audioCtx) this.initAudio();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'sine'; // Soft wave
+        osc.frequency.setValueAtTime(600, this.audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1000, this.audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime); // Quieter
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.1);
+      }
+
+      pulseUI() {
+        const indicator = document.getElementById('resq-pulse');
+        if (indicator) {
+          indicator.style.transform = "scale(1.2)";
+          indicator.style.backgroundColor = "var(--risk-critical)";
+          setTimeout(() => {
+            indicator.style.transform = "scale(1)";
+            indicator.style.backgroundColor = "#333";
+          }, 100);
+        }
+      }
+
+      start(protocolKey) {
+        // Legacy Support or Fallback
+        if (RESQ_PROTOCOLS[protocolKey]) {
+          this.currentProtocol = RESQ_PROTOCOLS[protocolKey];
+          this.active = true;
+          this.renderStep(this.currentProtocol.start);
+        }
+      }
+
+      getWireframeForCategory(cat) {
+        if (!cat) return '';
+        cat = cat.toLowerCase();
+        
+        // Base container for the premium icon
+        const premiumWrapper = (iconHtml, colorClass) => `
+          <div class="premium-illustration-box">
+            <div class="glow-ring ${colorClass}"></div>
+            <div class="glow-ring-2 ${colorClass}"></div>
+            <div class="icon-center ${colorClass}">
+              ${iconHtml}
+            </div>
+          </div>
+        `;
+
+        if (cat.includes("cardiac") || cat.includes("cpr") || cat.includes("chest") || cat.includes("heart") || cat.includes("compressions")) {
+           return premiumWrapper('<i class="fa-solid fa-heart-pulse fa-beat-fade"></i>', 'color-critical');
+        } else if (cat.includes("trauma") || cat.includes("bleed") || cat.includes("cut")) {
+           return premiumWrapper('<i class="fa-solid fa-droplet fa-bounce" style="--fa-animation-iteration-count: infinite; --fa-bounce-jump-scale-x: 1; --fa-bounce-jump-scale-y: 1.1;"></i>', 'color-critical');
+        } else if (cat.includes("choke") || cat.includes("airway") || cat.includes("heimlich")) {
+           return premiumWrapper('<i class="fa-solid fa-head-side-cough fa-shake"></i>', 'color-warning');
+        } else if (cat.includes("breath") || cat.includes("asthma")) {
+           return premiumWrapper('<i class="fa-solid fa-lungs fa-fade"></i>', 'color-info');
+        } else {
+           // Default: Recovery / General
+           return premiumWrapper('<i class="fa-solid fa-kit-medical"></i>', 'color-success');
+        }
+      }
+
+
+      // ═══════════════════════════════════════════════════════
+      // BUILT-IN ILLUSTRATED EMERGENCY PROTOCOLS
+      // Each step has: instruction text, detail, illustration SVG, type
+      // ═══════════════════════════════════════════════════════
+      // ── helper to build a photo illustration tag ──
+      _img(src, anim) {
+        return `<img src="/static/procedures/${src}" alt="procedure" class="proc-photo${anim?' '+anim:''}" onerror="this.style.display='none'">`;
+      }
+
+      get ILLUSTRATED_PROTOCOLS() {
+        const I = (src, anim) => this._img(src, anim);
+        const SVG = {
+          default:`<svg viewBox="0 0 200 160" class="proto-svg"><path d="M100 20 L132 60 L175 65 L148 92 L155 135 L100 110 L45 135 L52 92 L25 65 L68 60Z" fill="none" stroke="#38bdf8" stroke-width="2"/><circle cx="100" cy="80" r="25" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/><text x="100" y="85" text-anchor="middle" fill="#38bdf8" font-size="18">+</text><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Stay calm - help is on the way</text></svg>`,
+          done:`<svg viewBox="0 0 200 160" class="proto-svg"><circle cx="100" cy="75" r="55" fill="none" stroke="#22c55e" stroke-width="3"/><polyline points="72,75 92,95 130,55" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0 120" to="120 120" dur="0.6s" fill="freeze"/></polyline><text x="100" y="150" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">WELL DONE - PROTOCOL COMPLETE</text></svg>`,
+          cpr1: `<svg viewBox="0 0 200 160" class="proto-svg"><rect x="60" y="30" width="80" height="110" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/><ellipse cx="100" cy="45" rx="20" ry="22" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><rect x="75" y="68" width="50" height="60" rx="6" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><text x="100" y="100" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="bold">PATIENT</text><rect x="40" y="100" width="120" height="12" rx="4" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="4,2"/><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Check responsiveness</text></svg>`,
+          cpr2: `<svg viewBox="0 0 200 160" class="proto-svg"><rect x="60" y="30" width="80" height="110" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/><ellipse cx="100" cy="45" rx="20" ry="22" fill="#2d3a4e"/><rect x="75" y="68" width="50" height="60" rx="6" fill="#2d3a4e"/><g fill="none" stroke="#ef4444" stroke-width="2.5"><line x1="100" y1="50" x2="140" y2="30"/><line x1="140" y1="30" x2="155" y2="35"/></g><text x="155" y="28" fill="#ef4444" font-size="9" font-weight="bold">911</text><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Call emergency services</text></svg>`,
+          cpr3: `<svg viewBox="0 0 200 160" class="proto-svg animate-breathe"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><rect x="72" y="65" width="56" height="65" rx="6" fill="#2d3a4e"/><ellipse cx="100" cy="75" rx="15" ry="10" fill="none" stroke="#22c55e" stroke-width="2.5"/><path d="M85 65 Q100 50 115 65" fill="none" stroke="#22c55e" stroke-width="2" stroke-dasharray="3,2"/><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Tilt head, lift chin</text></svg>`,
+          cpr4: `<svg viewBox="0 0 200 160" class="proto-svg" id="cpr-anim"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#ef4444" stroke-width="2.5"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><rect x="72" y="65" width="56" height="65" rx="6" fill="#2d3a4e"/><rect x="78" y="72" width="44" height="30" rx="4" fill="#ef4444" opacity="0.3"/><rect id="comp-hand" x="80" y="58" width="40" height="16" rx="5" fill="#f97316" opacity="0.9"><animate attributeName="y" values="58;68;58" dur="0.55s" repeatCount="indefinite"/></rect><text x="100" y="150" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="bold">110 BPM - PUSH HARD</text></svg>`,
+          cpr5: `<svg viewBox="0 0 200 160" class="proto-svg animate-breathe"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#22c55e" stroke-width="2.5"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><ellipse cx="100" cy="55" rx="12" ry="8" fill="#22c55e" opacity="0.3"/><path d="M90 60 Q100 70 110 60" fill="none" stroke="#22c55e" stroke-width="2"/><rect x="72" y="68" width="56" height="62" rx="6" fill="#2d3a4e"/><text x="100" y="150" text-anchor="middle" fill="#22c55e" font-size="9">Seal mouth - breathe twice</text></svg>`,
+          bleed1:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="70" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><circle cx="100" cy="70" r="18" fill="#ef4444" opacity="0.7"/><path d="M88 60 Q100 50 112 60 Q100 100 88 60Z" fill="#b91c1c" opacity="0.8"/><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Identify the wound</text></svg>`,
+          bleed2:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="70" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><rect x="72" y="48" width="56" height="44" rx="6" fill="#f8fafc" opacity="0.9"/><path d="M72 70 H128" stroke="#e2e8f0" stroke-width="1"/><text x="100" y="105" text-anchor="middle" fill="#475569" font-size="8" font-weight="bold">CLOTH/GAUZE</text><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Apply clean cloth - press HARD</text></svg>`,
+          bleed3:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="70" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><rect x="72" y="48" width="56" height="44" rx="6" fill="#f8fafc" opacity="0.7"/><path d="M85 48 L85 92 M90 48 L90 92" stroke="#e2e8f0" stroke-width="1"/><circle cx="138" cy="55" r="12" fill="#ef4444" opacity="0.9"><animate attributeName="r" values="10;14;10" dur="1s" repeatCount="indefinite"/></circle><text x="138" y="59" text-anchor="middle" fill="white" font-size="8" font-weight="bold">!</text><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Press firmly - do not lift</text></svg>`,
+          bleed4:`<svg viewBox="0 0 200 160" class="proto-svg"><line x1="60" y1="20" x2="60" y2="140" stroke="#38bdf8" stroke-width="1" stroke-dasharray="4,3"/><ellipse cx="100" cy="80" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><path d="M100 30 L100 130" stroke="#64748b" stroke-width="1" stroke-dasharray="3,3"/><text x="30" y="70" fill="#38bdf8" font-size="8">HEART</text><path d="M55 68 L75 68" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arrow)"/><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Elevate wound above heart</text></svg>`,
+          choke1:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="40" rx="22" ry="25" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><rect x="78" y="65" width="44" height="60" rx="6" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><path d="M100 75 L100 55" stroke="#f97316" stroke-width="3"/><circle cx="100" cy="73" r="5" fill="#f97316"><animate attributeName="r" values="4;7;4" dur="0.8s" repeatCount="indefinite"/></circle><text x="100" y="145" text-anchor="middle" fill="#94a3b8" font-size="9">Confirm choking - can they speak?</text></svg>`,
+          choke2:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="35" rx="22" ry="24" fill="#2d3a4e" stroke="#64748b"/><rect x="78" y="59" width="44" height="70" rx="6" fill="#2d3a4e" stroke="#64748b"/><path d="M60 90 Q70 80 80 90" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/><path d="M120 90 Q130 80 140 90" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/><rect x="85" y="80" width="30" height="22" rx="4" fill="#38bdf8" opacity="0.2"/><text x="100" y="115" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="bold">5 BACK BLOWS</text><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">Stand beside - lean them forward</text></svg>`,
+          choke3:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="35" rx="22" ry="24" fill="#2d3a4e" stroke="#64748b"/><rect x="78" y="59" width="44" height="70" rx="6" fill="#2d3a4e" stroke="#64748b"/><circle cx="82" cy="95" r="8" fill="#ef4444" opacity="0.8"><animate attributeName="cy" values="95;85;95" dur="0.6s" repeatCount="indefinite"/></circle><circle cx="118" cy="95" r="8" fill="#ef4444" opacity="0.8"><animate attributeName="cy" values="95;85;95" dur="0.6s" repeatCount="indefinite"/></circle><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">Thrust inward &amp; upward - 5 times</text></svg>`,
+          burn1: `<svg viewBox="0 0 200 160" class="proto-svg"><path d="M100 20 Q130 40 120 70 Q140 50 130 80 Q150 60 130 100 Q120 130 100 140 Q80 130 70 100 Q50 60 70 80 Q60 50 80 70 Q70 40 100 20Z" fill="#f97316" opacity="0.8"><animate attributeName="d" values="M100 20 Q130 40 120 70 Q140 50 130 80 Q150 60 130 100 Q120 130 100 140 Q80 130 70 100 Q50 60 70 80 Q60 50 80 70 Q70 40 100 20Z;M100 18 Q135 38 122 72 Q142 52 132 82 Q152 62 132 102 Q122 132 100 142 Q78 132 68 102 Q48 62 68 82 Q58 52 78 72 Q65 38 100 18Z;M100 20 Q130 40 120 70 Q140 50 130 80 Q150 60 130 100 Q120 130 100 140 Q80 130 70 100 Q50 60 70 80 Q60 50 80 70 Q70 40 100 20Z" dur="1.5s" repeatCount="indefinite"/></path><text x="100" y="155" text-anchor="middle" fill="#94a3b8" font-size="9">Remove from heat source - safely</text></svg>`,
+          burn2: `<svg viewBox="0 0 200 160" class="proto-svg"><path d="M70 40 Q100 30 130 40 L130 110 Q100 120 70 110Z" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><path d="M75 50 L125 50" stroke="#38bdf8" stroke-width="1.5" opacity="0.5"/><polyline points="50,30 65,60 65,120" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linecap="round"><animate attributeName="stroke-dashoffset" values="100;0" dur="1.5s" repeatCount="indefinite"/></polyline><text x="100" y="145" text-anchor="middle" fill="#94a3b8" font-size="9">Cool with lukewarm water 10–20 min</text></svg>`,
+          stroke1:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="75" rx="50" ry="60" fill="#1e293b" stroke="#818cf8" stroke-width="2"/><text x="75" y="65" fill="#22c55e" font-size="22">😊</text><text x="108" y="65" fill="#ef4444" font-size="22">😶</text><line x1="100" y1="40" x2="100" y2="110" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="4,3"/><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">FAST: Face drooping on one side?</text></svg>`,
+          seizure1:`<svg viewBox="0 0 200 160" class="proto-svg"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#818cf8" stroke-width="2"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><rect x="72" y="65" width="56" height="65" rx="6" fill="#2d3a4e"/><rect x="30" y="90" width="140" height="8" rx="4" fill="#818cf8" opacity="0.7"/><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">Clear the area - remove hazards</text></svg>`,
+          default:`<svg viewBox="0 0 200 160" class="proto-svg"><path d="M100 20 L132 60 L175 65 L148 92 L155 135 L100 110 L45 135 L52 92 L25 65 L68 60Z" fill="none" stroke="#38bdf8" stroke-width="2"/><circle cx="100" cy="80" r="25" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/><text x="100" y="85" text-anchor="middle" fill="#38bdf8" font-size="18">+</text><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Stay calm - help is on the way</text></svg>`,
+          done: `<svg viewBox="0 0 200 160" class="proto-svg"><circle cx="100" cy="75" r="55" fill="none" stroke="#22c55e" stroke-width="3"/><polyline points="72,75 92,95 130,55" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0 120" to="120 120" dur="0.6s" fill="freeze"/></polyline><text x="100" y="150" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">WELL DONE - PROTOCOL COMPLETE</text></svg>`
+        };
+
+        return {
+          cpr: {
+            title: '🫀 CPR Protocol',
+            color: '#ef4444',
+            steps: [
+              { text: 'Scene Safety & Check Response', detail: 'Tap shoulders firmly - shout "Are you OK?". If no response, call for help.', svg: SVG.default, type:'action' },
+              { text: 'Call Emergency Services NOW', detail: 'Dial 911 immediately. Put on loudspeaker. Tell them: location, unconscious person, not breathing.', svg: I('cpr_check.png'), type:'action' },
+              { text: 'Open the Airway', detail: 'Tilt head back with one hand on forehead, lift chin with 2 fingers. Check for breathing - 10 seconds.', svg: I('cpr_check.png'), type:'action' },
+              { text: 'Give 2 Rescue Breaths', detail: 'Pinch nose closed. Make a seal over the mouth. Blow steadily for 1 second - watch chest rise. Repeat twice.', svg: I('cpr_rescue_breath.png','anim-breathe'), type:'action' },
+              { text: '30 Chest Compressions - 110 BPM', detail: 'Interlock hands on CENTER of chest. Arms STRAIGHT. Push down 5–6 cm HARD and FAST. Let chest fully rise between compressions.', svg: I('cpr_compression.png','anim-compress'), type:'metronome', bpm:110 },
+              { text: 'Cycle: 30 Compressions → 2 Breaths', detail: 'Keep repeating. Do not stop unless patient breathes normally or EMS takes over. You are their heartbeat.', svg: I('cpr_compression.png','anim-compress'), type:'action' },
+            ]
+          },
+          bleeding: {
+            title: '🩸 Bleeding Control',
+            color: '#ef4444',
+            steps: [
+              { text: 'Expose & Identify the Wound', detail: 'Carefully cut or remove clothing around the wound. Wear gloves if available. Assess how severe the bleeding is.', svg: I('bleeding_pressure.png'), type:'action' },
+              { text: 'Apply Firm Direct Pressure', detail: 'Press a clean cloth, gauze or cloth pad directly on the wound. Use your full hand - press HARD.', svg: I('bleeding_pressure.png'), type:'action' },
+              { text: 'Hold - Do NOT Lift the Cloth!', detail: 'If it soaks through, add more material ON TOP. Never remove the first layer - it helps the blood clot. Keep pressing.', svg: I('bleeding_pressure.png','anim-pulse'), type:'action' },
+              { text: 'Elevate Above the Heart', detail: 'If an arm or leg, raise it higher than the level of the heart. This slows blood flow and helps the clot form.', svg: I('bleeding_pressure.png'), type:'action' },
+              { text: 'Watch for Shock', detail: 'Signs: pale/cold skin, rapid weak pulse, confusion, fainting. Lay patient flat, keep them warm. Call 911 if not done.', svg: SVG.default, type:'action' },
+            ]
+          },
+          choking: {
+            title: '😮‍💨 Choking - Heimlich',
+            color: '#f97316',
+            steps: [
+              { text: 'Confirm They Are Choking', detail: 'Ask "Are you choking?" Cannot speak, cough or breathe, or has blue lips = full blockage. Act immediately.', svg: SVG.default, type:'action' },
+              { text: '5 Sharp Back Blows', detail: 'Stand beside and slightly behind them. Lean them forward. Strike firmly 5 times between shoulder blades with the heel of your hand.', svg: I('choking_back.png'), type:'action' },
+              { text: '5 Abdominal Thrusts (Heimlich)', detail: 'Stand behind patient. Make a fist - thumb side against abdomen, above navel, below chest. Cover with other hand. Pull SHARPLY inward and upward 5 times.', svg: I('choking_heimlich.png','anim-thrust'), type:'action' },
+              { text: 'Repeat Until Airway Clears', detail: 'Alternate 5 back blows then 5 abdominal thrusts. If they become unconscious, start CPR and call 911.', svg: I('choking_heimlich.png'), type:'action' },
+            ]
+          },
+          burn: {
+            title: '🔥 Burn Treatment',
+            color: '#f97316',
+            steps: [
+              { text: 'Remove from Heat Source', detail: 'Move the patient away from the heat safely. Remove clothing NEAR the burn ONLY if NOT stuck to skin. Remove watches and jewelry before swelling starts.', svg: I('burn_remove.png'), type:'action' },
+              { text: 'Cool with Running Water', detail: 'Hold the burn under cool (NOT cold) running water for 10 to 20 minutes. Do NOT use ice, butter, toothpaste or creams - they make it worse.', svg: I('burn_water.png','anim-water'), type:'action' },
+              { text: 'Cover Loosely', detail: 'After cooling, cover with a clean non-fluffy material - cling film or a clean plastic bag works well. Do not wrap tightly - leave room for swelling.', svg: I('burn_cover.png'), type:'action' },
+              { text: 'Do NOT Burst Blisters', detail: 'Blisters form a sterile barrier that protects against infection. Never pop them. Keep the burn clean and avoid touching it with bare hands.', svg: I('burn_cover.png','anim-pulse'), type:'action' },
+              { text: 'Seek Medical Care', detail: 'Call 911 for: burns larger than 3cm, burns on face/hands/genitals/feet/joints, deep burns, chemical/electrical burns, or any burn in a child or elderly person.', svg: SVG.done, type:'action' },
+            ]
+          },
+          stroke: {
+            title: '🧠 Stroke - FAST Protocol',
+            color: '#818cf8',
+            steps: [
+              { text: 'FACE - Ask Them to Smile', detail: 'Ask the person to smile. Look carefully: Is one side of the face drooping or numb? An uneven or lopsided smile is a key stroke warning sign.', svg: I('stroke_fast.png','anim-breathe'), type:'action' },
+              { text: 'ARMS - Raise Both Arms', detail: 'Ask the patient to raise both arms at the same time and hold them up. Does one arm drift downward or feel weak? Arm weakness is a major stroke sign.', svg: I('stroke_arm.png'), type:'action' },
+              { text: 'SPEECH - Repeat a Phrase', detail: 'Ask them to say "The sky is blue and it is a sunny day". Is their speech slurred, garbled, or strange? Can they understand you? Speech problems are a stroke sign.', svg: I('stroke_speech.png'), type:'action' },
+              { text: 'TIME - Call 911 RIGHT NOW', detail: 'If ANY FAST sign is present, call 911 IMMEDIATELY. Note the EXACT time symptoms started - tell this to EMS. Every minute counts - brain tissue is being lost.', svg: I('stroke_call.png','anim-pulse'), type:'action' },
+              { text: 'Position and Wait for EMS', detail: 'If conscious: sit them upright, supported. If unconscious: recovery position on their side. Do NOT give food or water. Stay with them and talk calmly.', svg: I('stroke_position.png'), type:'action' },
+            ]
+          },
+          seizure: {
+            title: '⚡ Seizure Response',
+            color: '#eab308',
+            steps: [
+              { text: 'Clear the Area Immediately', detail: 'Do NOT restrain the person. Move hard or sharp objects away. Gently cushion their head with a folded jacket or soft item. Loosen any tight clothing around the neck.', svg: I('seizure_clear.png'), type:'action' },
+              { text: 'Do NOT Put Anything in Mouth', detail: 'This is a dangerous myth - people CANNOT swallow their tongue. NEVER put fingers, a wallet, or any object in the mouth. This risks broken teeth and serious injury to both of you.', svg: I('seizure_clear.png','anim-pulse'), type:'action' },
+              { text: 'Time the Seizure', detail: 'Note the exact time the seizure started. Call 911 if: it lasts more than 5 minutes, a second seizure follows, they are injured, diabetic, pregnant, or do not regain consciousness.', svg: I('seizure_time.png'), type:'action' },
+              { text: 'Recovery Position After Convulsions', detail: 'Once shaking stops, gently roll the patient onto their side (recovery position). This keeps the airway clear from saliva and prevents choking. Support their head.', svg: I('seizure_position.png'), type:'action' },
+              { text: 'Stay and Monitor', detail: 'After the seizure, the person may be confused and exhausted - this is normal. Talk gently and reassure them. Monitor breathing. Do not leave them alone until fully recovered.', svg: SVG.done, type:'action' },
+            ]
+          },
+          allergy: {
+            title: '⚠️ Allergic Reaction',
+            color: '#22c55e',
+            steps: [
+              { text: 'Remove or Move Away from Trigger', detail: 'Identify the allergen (food, insect sting, medication, latex) and remove it immediately or move the patient away from it. Remove the stinger if visible by scraping sideways.', svg: I('allergy_epipen.png'), type:'action' },
+              { text: 'Use EpiPen if Available', detail: 'If patient has a prescribed auto-injector (EpiPen): remove blue safety cap, press orange tip firmly against OUTER thigh, hold for 10 seconds. Can be given through clothing.', svg: I('allergy_epipen.png','anim-pulse'), type:'action' },
+              { text: 'Call 911 - Anaphylaxis is Life-Threatening', detail: 'Hives + swelling of mouth/throat + breathing difficulty = anaphylaxis. Call 911 NOW even if EpiPen was used - a second dose may be needed and hospital care is essential.', svg: I('stroke_call.png'), type:'action' },
+              { text: 'Position the Patient Correctly', detail: 'Breathing difficulty - sit upright leaning forward. Feeling faint or pale - lay FLAT with legs raised 30cm. Unconscious - recovery position on their side. Never stand them up suddenly.', svg: I('allergy_position.png'), type:'action' },
+              { text: 'Monitor Until EMS Arrives', detail: 'Stay calm and reassure the patient. Monitor breathing every minute. Do NOT give antihistamines as a replacement for epinephrine. Be ready to perform CPR if breathing stops.', svg: SVG.done, type:'action' },
+            ]
+          }
+
+        };
+      }
+
+      // ── Map keywords to protocol keys ──
+      // Note: more-specific patterns are checked BEFORE generic ones to avoid false matches
+      detectProtocol(text) {
+              const t = text.toLowerCase().trim();
+              // ONLY trigger protocol for explicit action requests or very short single-keyword commands.
+              // Conversational questions ("my chest hurts", "what do burns feel like") go to the AI.
+              const intentWords = ['start','show','begin','guide','steps','protocol','procedure',
+                'how to treat','teach me','help me with','walk me','what do i do','what should i do',
+                'demonstrate','activate','open','perform','do cpr','do the'];
+              const hasIntent = intentWords.some(w => t.includes(w));
+              const wordCount = t.split(/\s+/).length;
+              const isShortCommand = wordCount <= 3;
+              if (!hasIntent && !isShortCommand) return null;
+              // Map to protocol key once intent/short-command is confirmed
+              if (t.includes('cpr') || t.includes('cardiac arrest') || t.includes('heart attack') ||
+                  t.includes('chest compression') || t.includes('not breathing') || t.includes('no pulse'))
+                  return 'cpr';
+              if (t.includes('bleed') || t.includes('hemorrh') || t.includes('wound'))  return 'bleeding';
+              if (t.includes('choke') || t.includes('choking') || t.includes('heimlich'))  return 'choking';
+              if (t.includes('burn') || t.includes('scald') || t.includes('thermal'))  return 'burn';
+              if (t.includes('seiz') || t.includes('convuls') || t.includes('epilep'))  return 'seizure';
+              if (t.includes('allerg') || t.includes('anaphyl') || t.includes('epipen'))  return 'allergy';
+              if (t.includes('stroke') || t.includes('face droop') || t.includes('arm weak'))  return 'stroke';
+              return null;
+            }
+
+      startFromServer(plan, originalQuery) {
+        // If we have the original user query, prefer that for routing (most accurate)
+        const queryKey = originalQuery ? this.detectProtocol(originalQuery) : null;
+        if (queryKey) { this.startLocal(queryKey); return; }
+        // Fallback: detect from plan title only (NOT from step text which can contain misleading medical words)
+        const titleKey = this.detectProtocol(plan.title || '');
+        if (titleKey) { this.startLocal(titleKey); return; }
+
+        // Fallback: render server plan text with basic illustration
+        const dynamicProto = { title: plan.title.toUpperCase(), steps: [] };
+        plan.steps.forEach((txt, idx) => {
+          dynamicProto.steps.push({
+            text: txt, detail: plan.urgency || '',
+            svg: this.ILLUSTRATED_PROTOCOLS.cpr ? '<svg viewBox="0 0 200 160" class="proto-svg"><circle cx="100" cy="80" r="50" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/><text x="100" y="85" text-anchor="middle" fill="#38bdf8" font-size="28">+</text></svg>' : '',
+            type: idx === plan.steps.length - 1 ? 'finish' : 'action'
+          });
+        });
+        this.currentProtocol = dynamicProto;
+        this.currentStepIdx = 0;
+        this.active = true;
+        this.renderProStep();
+      }
+
+      startLocal(key) {
+        const proto = this.ILLUSTRATED_PROTOCOLS[key];
+        if (!proto) return;
+        this.currentProtocol = proto;
+        this.currentStepIdx = 0;
+        this.active = true;
+        this.renderProStep();
+      }
+
+      renderProStep() {
+        this.currentStepId = 'step_' + this.currentStepIdx; // legacy compat
+        const proto = this.currentProtocol;
+        const steps = proto.steps;
+        const idx = this.currentStepIdx;
+        const step = steps[idx];
+        const container = document.getElementById('guide-container');
+        const total = steps.length;
+        const isLast = idx === total - 1;
+        const color = proto.color || '#38bdf8';
+
+        // Stop CPR metronome if leaving that step
+        if (this.interval && step.type !== 'metronome') {
+          clearInterval(this.interval); this.interval = null;
+        }
+
+        const progressPct = Math.round(((idx + 1) / total) * 100);
+        const prevDisabled = idx === 0 ? 'opacity:0.4;cursor:not-allowed;' : '';
+
+        container.innerHTML = `
+          <div class="resq-device-screen" style="border-color:${color}33; box-shadow:0 0 30px ${color}22;">
+
+            <!-- Protocol header + progress -->
+            <div style="margin-bottom:1rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                <span style="background:${color}22; border:1px solid ${color}; color:${color}; padding:3px 10px; border-radius:6px; font-size:0.75rem; font-weight:800; letter-spacing:1px;">
+                  ${proto.title}
+                </span>
+                <span style="color:#64748b; font-size:0.8rem; font-weight:700;">Step ${idx+1} / ${total}</span>
+              </div>
+              <!-- Progress bar -->
+              <div style="height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                <div style="width:${progressPct}%; height:100%; background:${color}; border-radius:3px; transition:width 0.4s;"></div>
+              </div>
+            </div>
+
+            <!-- Illustration -->
+            <div style="display:flex; justify-content:center; margin-bottom:1rem;">
+              ${step.svg || ''}
+            </div>
+
+            <!-- Instruction -->
+            <div style="text-align:center; margin-bottom:1.2rem;">
+              <div style="font-size:1.55rem; font-weight:900; color:#ffffff; line-height:1.3; margin-bottom:0.5rem; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+                ${step.text}
+              </div>
+              <div style="font-size:0.95rem; color:#94a3b8; line-height:1.6; font-weight:500;">
+                ${step.detail || ''}
+              </div>
+              ${step.type === 'metronome' ? `
+                <div id="resq-pulse" style="margin:1rem auto; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle, ${color}, ${color}88); display:flex; align-items:center; justify-content:center; font-weight:900; color:white; font-size:0.85rem; animation:heartPulse 0.55s ease-in-out infinite; box-shadow:0 0 30px ${color}66;">
+                  110<br>BPM
+                </div>` : ''}
+            </div>
+
+            <!-- Controls -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button onclick="resq.proPrev()" style="flex:1; ${prevDisabled} padding:14px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#94a3b8; border-radius:12px; font-size:0.9rem; font-weight:700; cursor:pointer;">
+                ← Back
+              </button>
+              <button onclick="resq.proRepeat()" style="flex:1; padding:14px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#64748b; border-radius:12px; font-size:0.85rem; font-weight:700; cursor:pointer;">
+                🔄 Repeat
+              </button>
+              ${isLast
+                ? `<button onclick="resq.stop()" style="flex:2; padding:14px; background:linear-gradient(135deg,#22c55e,#16a34a); color:white; border:none; border-radius:12px; font-size:1rem; font-weight:800; cursor:pointer; box-shadow:0 0 20px #22c55e44;">✅ Done</button>`
+                : `<button onclick="resq.proNext()" style="flex:2; padding:14px; background:linear-gradient(135deg,${color},${color}cc); color:white; border:none; border-radius:12px; font-size:1rem; font-weight:800; cursor:pointer; box-shadow:0 0 20px ${color}44;">NEXT →</button>`
+              }
+            </div>
+
+            <div style="text-align:center; margin-top:0.8rem; font-size:0.72rem; color:#475569;">
+              Say <strong style="color:${color}">"next"</strong> or <strong style="color:${color}">"back"</strong> &nbsp;|&nbsp; Tap NEXT → or use voice
+            </div>
+          </div>`;
+
+        // TTS narration
+        if (voice) {
+          setTimeout(() => voice.speak(`Step ${idx+1}. ${step.text}. ${step.detail}`), 400);
+        }
+
+        // Start metronome
+        if (step.type === 'metronome') {
+          this.initAudio();
+          if (!this.interval) {
+            const ms = 60000 / (step.bpm || 110);
+            this.playTone();
+            this.interval = setInterval(() => this.playTone(), ms);
+          }
+        }
+      }
+
+      proNext() {
+        this.initAudio();
+        const total = this.currentProtocol.steps.length;
+        if (this.currentStepIdx < total - 1) {
+          this.currentStepIdx++;
+          this.renderProStep();
+        }
+      }
+
+      proPrev() {
+        this.initAudio();
+        if (this.currentStepIdx > 0) {
+          this.currentStepIdx--;
+          this.renderProStep();
+        }
+      }
+
+      proRepeat() {
+        if (voice) {
+          const step = this.currentProtocol.steps[this.currentStepIdx];
+          voice.speak(`Repeating: ${step.text}. ${step.detail}`);
+        }
+      }
+
+      // Legacy renderStep kept for backward compat still used by legacy protocols
+      renderStep(stepId) {
+        // If we have a new-style protocol array, use renderProStep
+        if (Array.isArray(this.currentProtocol?.steps)) { this.renderProStep(); return; }
+        // Otherwise old dict-based
+        this.currentStepId = stepId;
+        const step = this.currentProtocol.steps[stepId];
+        const container = document.getElementById('guide-container');
+        if (this.interval && step.type !== 'metronome') { clearInterval(this.interval); this.interval = null; }
+        if (voice) { setTimeout(() => voice.speak((step.text||'') + '. ' + (step.subtext||'')), 500); }
+        container.innerHTML = `<div class="resq-device-screen"><div class="resq-header"><span class="badg">RESQ-ASSIST</span><span class="proto-title">${this.currentProtocol.title||''}</span></div><div class="resq-content">${step.wireframe_html||''}<h1 class="resq-main-text">${step.text}</h1><p class="resq-sub-text">${step.subtext||''}</p>${step.type==='metronome'?`<div id="resq-pulse" class="pulse-ring">110 BPM</div>`:''}</div><div class="resq-controls">${step.type==='decision'?`<button class="resq-btn btn-no" onclick="resq.next('${step.no}')">NO</button><button class="resq-btn btn-yes" onclick="resq.next('${step.yes}')">YES</button>`:step.type==='action'?`<button class="resq-btn btn-next" onclick="resq.next('${step.next}')">NEXT STEP →</button>`:`<button class="resq-btn btn-stop" onclick="resq.stop()">END</button>`}</div></div>`;
+        if (step.type==='metronome') { this.initAudio(); if(!this.interval){const ms=60000/(step.bpm||110);this.playTone();this.interval=setInterval(()=>this.playTone(),ms);} }
+      }
+
+      next(stepId) { this.initAudio(); this.renderStep(stepId); }
+
+      handleVoice(type) {
+        if (!this.currentProtocol) return;
+        // new array-based
+        if (Array.isArray(this.currentProtocol.steps)) {
+          if (type === 'next') this.proNext();
+          else if (type === 'no' || type === 'back') this.proPrev();
+          else if (type === 'repeat') this.proRepeat();
+          return;
+        }
+        // old dict-based
+        const step = this.currentProtocol.steps[this.currentStepId];
+        if (type === 'yes' && step.yes) this.next(step.yes);
+        if (type === 'no' && step.no) this.next(step.no);
+        if (type === 'next' && step.next) this.next(step.next);
+      }
+
+      stop() {
+        if (this.interval) clearInterval(this.interval);
+        document.getElementById('guide-container').innerHTML = "";
+        this.active = false;
+        this.currentStepIdx = 0;
+        if (voice) voice.speak('Protocol ended. Stay safe.');
+      }
+
+      toggleSignMode() { if (typeof signLang !== 'undefined') signLang.toggle(); }
+
+    } // end class ResQEngine
+
+    const resq = new ResQEngine();
+
+    // ── Chat history for multi-turn LLM conversation ──
+    const _chatHistory = [];
+
+    // Render a markdown-ish string as safe HTML for chat bubbles
+    function _renderMd(txt) {
+      return txt
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g,'<em>$1</em>')
+        .replace(/_(.+?)_/g,'<em>$1</em>')
+        .replace(/^(\d+)\. /gm,'<br><b>$1.</b> ')
+        .replace(/^[•·] /gm,'<br>• ')
+        .replace(/\n/g,'<br>');
+    }
+
+    function _appendBubble(role, html, isTyping) {
+      const log = document.getElementById('ai-chat-log');
+      if (!log) return;
+      const el = document.createElement('div');
+      const isUser = role === 'user';
+      el.style.cssText = [
+        'display:flex; align-items:flex-start; gap:8px;',
+        isUser ? 'flex-direction:row-reverse;' : ''
+      ].join('');
+      const avatar = document.createElement('div');
+      avatar.style.cssText = 'width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px;' +
+        (isUser ? 'background:#334155;' : 'background:linear-gradient(135deg,#06b6d4,#0284c7);');
+      avatar.textContent = isUser ? '🧑' : '👩‍⚕️';
+      const bubble = document.createElement('div');
+      bubble.style.cssText = [
+        'max-width:78%;padding:10px 14px;border-radius:',
+        isUser ? '14px 14px 4px 14px;background:#334155;color:#f1f5f9;' : '14px 14px 14px 4px;background:linear-gradient(135deg,rgba(6,182,212,.18),rgba(2,132,199,.12));border:1px solid rgba(6,182,212,.3);color:#e2e8f0;',
+        'font-size:0.88rem;line-height:1.5;'
+      ].join('');
+      bubble.innerHTML = html;
+      if (isTyping) { bubble.id = '_sara-typing'; bubble.style.opacity='0.7'; }
+      el.appendChild(avatar); el.appendChild(bubble);
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+
+      // Nudge Google Translate to re-scan newly-added bubble text
+      try {
+        var m = document.cookie.match(/googtrans=\/[a-z-]+\/([a-z-]+)/i);
+        if (m && m[1] && m[1] !== "en" && typeof doGTranslate === "function") {
+          setTimeout(function(){ doGTranslate("en|" + m[1]); }, 120);
+        }
+      } catch(e) {}
+
+      return bubble;
+    }
+
+    // ── searchFirstAid: primary entry point from AI nurse input ──
+    function searchFirstAid(query) {
+      const inp = document.getElementById('ai-text-input');
+      if (inp) inp.value = '';
+      resq.initAudio();
+
+      // Show user bubble
+      _appendBubble('user', _renderMd(query));
+      _chatHistory.push({ role:'user', content: query });
+
+      const key = resq.detectProtocol(query);
+      if (key) {
+        resq.startLocal(key);
+        const title = resq.ILLUSTRATED_PROTOCOLS[key].title;
+        const msg = `I'm activating the <strong>${title}</strong> - follow the illustrated steps below. Say <em>"next"</em> to advance.`;
+        _appendBubble('nurse', msg);
+        _chatHistory.push({ role:'nurse', content: 'Activating ' + title });
+        if (voice) voice.speak('Starting ' + title + '. Follow the steps shown.');
+        return;
+      }
+
+      // ── Real LLM / medical chat ──
+      const typingBubble = _appendBubble('nurse', '💭 thinking…', true);
+      axios.post('/api/chat', { message: query, history: _chatHistory.slice(-10) })
+        .then(r => {
+          const reply = r.data && r.data.reply ? r.data.reply : 'I am here to help. Please describe the emergency.';
+          _chatHistory.push({ role:'nurse', content: reply });
+          if (typingBubble) typingBubble.innerHTML = _renderMd(reply);
+          const t = document.getElementById('_sara-typing');
+          if (t) { t.id=''; t.style.opacity='1'; }
+          if (voice) voice.speak(reply.replace(/<[^>]+>/g,'').substring(0,120));
+        })
+        .catch(() => {
+          if (typingBubble) typingBubble.innerHTML = '⚠️ Could not reach Nurse Sara. For emergencies, call <strong>911</strong> immediately.';
+        });
+    }
+
+    function handleInputKey(e) {
+      if (e.key === 'Enter') {
+        const val = document.getElementById('ai-text-input').value.trim();
+        if (val) searchFirstAid(val);
+      }
+    }
+
+
+    // Add these dynamic styles to head if not present, or inline them
+    // We'll append a style block dynamically for simplicity in this edit
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+      @keyframes heartPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }
+      @keyframes compress { 0%,100%{transform:scaleY(1) translateY(0);} 50%{transform:scaleY(0.97) translateY(4px);} }
+      @keyframes breathe { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.04);opacity:0.85;} }
+      @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0);} 60%{box-shadow:0 0 0 10px rgba(239,68,68,0.3);} }
+      @keyframes waterFlow { 0%{filter:hue-rotate(0deg) brightness(1);} 50%{filter:hue-rotate(20deg) brightness(1.1);} 100%{filter:hue-rotate(0deg) brightness(1);} }
+      .proto-svg { width:160px; height:130px; border-radius:16px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); padding:8px; }
+      .proc-photo { width:220px; height:160px; object-fit:cover; border-radius:16px; border:2px solid rgba(255,255,255,0.12); box-shadow:0 8px 32px rgba(0,0,0,0.4); display:block; }
+      .anim-compress { animation:compress 0.55s ease-in-out infinite; transform-origin:center bottom; }
+      .anim-breathe  { animation:breathe 2s ease-in-out infinite; }
+      .anim-pulse    { animation:pulse 1.5s ease-in-out infinite; }
+      .anim-water    { animation:waterFlow 2s ease-in-out infinite; }
+            /* ResQ Medical Device UI - PREMIUM GLASSMORPHISM */
+            .resq-device-screen {
+              background: rgba(15, 23, 42, 0.7); /* Deep Slate Glass */
+              backdrop-filter: blur(20px);
+              -webkit-backdrop-filter: blur(20px);
+              border: 1px solid rgba(255, 255, 255, 0.15);
+              border-top: 1px solid rgba(255, 255, 255, 0.3);
+              border-radius: 24px;
+              padding: 30px 20px;
+              color: #fff;
+              font-family: 'Inter', sans-serif;
+              box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(6, 182, 212, 0.1);
+              position: relative;
+              overflow: hidden;
+              animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+            @keyframes slideUpFade { 0% { opacity: 0; transform: translateY(30px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+            .resq-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 25px; }
+            .badg { background: rgba(6, 182, 212, 0.2); border: 1px solid #06b6d4; color: #06b6d4; padding: 4px 10px; font-size: 0.8rem; font-weight: 700; border-radius: 6px; letter-spacing: 1px; }
+            .proto-title { color: #94a3b8; letter-spacing: 1px; font-weight: 600; font-size: 0.95rem; text-transform: uppercase; }
+            
+            .resq-content { text-align: center; margin-bottom: 35px; min-height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+            .resq-main-text { 
+              font-size: 2.4rem; 
+              font-weight: 900; 
+              color: #ffffff; 
+              line-height: 1.3; 
+              margin-bottom: 1rem; 
+              text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+              letter-spacing: -0.5px;
+            }
+            .resq-sub-text { font-size: 1.25rem; color: #cbd5e1; font-weight: 500; margin-bottom: 1rem; line-height: 1.5; }
+            
+            /* Modern Buttons */
+            .resq-controls { display: flex; gap: 15px; justify-content: center; width: 100%; }
+            .resq-btn { 
+              border: none;
+              padding: 16px 32px; 
+              font-size: 1.1rem; 
+              font-weight: 700; 
+              cursor: pointer; 
+              border-radius: 12px; 
+              flex: 1; 
+              text-transform: uppercase; 
+              letter-spacing: 1px;
+              transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+              box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            }
+            .resq-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+            .resq-btn:active { transform: translateY(1px); }
+            .btn-next { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; width: 100%; flex: auto; }
+            .btn-stop { background: rgba(255,255,255,0.1); color: #cbd5e1; font-size: 0.9rem; padding: 12px; border: 1px solid rgba(255,255,255,0.2); }
+            .btn-stop:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; }
+            
+            .pulse-ring { width: 120px; height: 120px; border-radius: 50%; background: rgba(239,68,68,0.1); border: 4px solid #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-top: 15px; transition: all 0.05s; box-shadow: 0 0 30px rgba(239,68,68,0.4), inset 0 0 20px rgba(239,68,68,0.4); text-shadow: 0 0 10px rgba(239,68,68,0.8); }
+
+            /* PREMIUM ILLUSTRATION ENGINE */
+            .premium-illustration-box {
+              position: relative;
+              width: 180px;
+              height: 180px;
+              margin: 0 auto 30px auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            .glow-ring {
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              border-radius: 50%;
+              opacity: 0.3;
+              animation: expandGlow 2s infinite ease-out;
+            }
+            
+            .glow-ring-2 {
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              border-radius: 50%;
+              opacity: 0.1;
+              animation: expandGlow 2s infinite ease-out 1s;
+            }
+
+            .icon-center {
+              position: relative;
+              z-index: 10;
+              font-size: 5.5rem;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+            }
+
+            /* Illustration Colors */
+            .color-critical .glow-ring, .color-critical .glow-ring-2 { background: #ef4444; }
+            .color-critical.icon-center, .icon-center.color-critical { color: #f87171; text-shadow: 0 0 30px rgba(239,68,68,0.8); }
+            
+            .color-warning .glow-ring, .color-warning .glow-ring-2 { background: #f59e0b; }
+            .color-warning.icon-center, .icon-center.color-warning { color: #fbbf24; text-shadow: 0 0 30px rgba(245,158,11,0.8); }
+
+            .color-info .glow-ring, .color-info .glow-ring-2 { background: #0ea5e9; }
+            .color-info.icon-center, .icon-center.color-info { color: #38bdf8; text-shadow: 0 0 30px rgba(14,165,233,0.8); }
+
+            .color-success .glow-ring, .color-success .glow-ring-2 { background: #22c55e; }
+            .color-success.icon-center, .icon-center.color-success { color: #4ade80; text-shadow: 0 0 30px rgba(34,197,94,0.8); }
+
+            @keyframes expandGlow {
+              0% { transform: scale(0.5); opacity: 0.8; }
+              100% { transform: scale(1.5); opacity: 0; }
+            }
+
+            .pulse-mic { animation: pulseRed 1s infinite; }
+            @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+    `;
+    document.head.appendChild(styleSheet);
+
+
+    let trackingInterval;
+    let lastStatus = "DISPATCHED";
+
+    function startTracking(trackId) {
+      if (trackingInterval) clearInterval(trackingInterval);
+
+      // UI to Tracking Mode
+      // FIX: Ensure we target the correct welcome/dashboard container
+      const welcome = document.getElementById('main-dashboard');
+      if (welcome) welcome.style.display = 'none';
+
+      document.getElementById('step-track').style.display = 'block';
+
+      trackingInterval = setInterval(async () => {
+        try {
+          const res = await axios.get(`/api/ambulance/status/${trackId}`);
+          const data = res.data;
+          const status = data.status || "Responding";
+          lastStatus = status; // Track state for 404 handling
+
+          const etaSpan = document.getElementById('track-eta');
+          const header = document.querySelector('#step-track h2');
+          const sub = document.querySelector('#step-track p');
+          
+          // Use hospital coordinates if available, otherwise fallback name
+          const destQuery = (data.hosp_lat && data.hosp_lng) ? `${data.hosp_lat},${data.hosp_lng}` : (data.destination || 'Hospital');
+
+          // Update real ambulance map if lat/lng is provided by backend
+          if (data.ambulance_lat && data.ambulance_lng && status === "Dispatched") {
+              const gpsText = document.getElementById('live-gps-text');
+              if (gpsText) {
+                  gpsText.innerHTML = `<i class="fa-solid fa-satellite-dish" style="color:#22c55e;"></i> GPS: ${data.ambulance_lat.toFixed(4)}, ${data.ambulance_lng.toFixed(4)}`;
+              }
+              // Only load the iframe once to avoid flickering
+              if (!window.mapEmbeddedForAmb && data.ambulance_lat !== 0) {
+                  const iframe = document.getElementById('live-map-iframe');
+                  if (iframe) {
+                      iframe.src = `https://maps.google.com/maps?q=${data.ambulance_lat},${data.ambulance_lng}&t=m&z=16&output=embed&iwloc=Near`;
+                      window.mapEmbeddedForAmb = true;
+                  }
+              }
+          }
+
+          // Check Volunteer Status
+          if (data.volunteer_status === "Responding" && !document.getElementById('vol-toast')) {
+            showVolunteerToast();
+          }
+
+          if (status === "ON SCENE") {
+            header.innerHTML = '<i class="fa-solid fa-location-dot"></i> AMBULANCE HERE';
+            header.style.color = '#22c55e';
+            etaSpan.innerText = "NOW";
+            sub.innerText = "Medical crew is arriving at your side.";
+
+            // Show Distance info if we have it
+            if (data.distance) {
+              const distInfo = document.createElement('div');
+              distInfo.innerHTML = `<small style="color:#aaa">Distance Covered: ${data.distance}</small>`;
+              header.appendChild(distInfo);
+            }
+
+            // HIDE CANCEL BUTTON
+            const cancelBtn = document.getElementById('btn-cancel-request');
+            if (cancelBtn) cancelBtn.style.display = 'none';
+          }
+          else if (status === "TRANSPORTING") {
+            header.innerHTML = '<i class="fa-solid fa-truck-fast"></i> ON THE MOVE';
+            header.style.color = '#eab308'; // Yellow
+            etaSpan.innerText = "HOSP";
+            sub.innerText = "Transporting to " + (data.destination || "ER");
+
+            // Ensure Cancel is gone
+            const cancelBtn = document.getElementById('btn-cancel-request');
+            if (cancelBtn) cancelBtn.style.display = 'none';
+
+            // Hide the GPS tracking map
+            const liveMap = document.getElementById('ambulance-live-map');
+            if (liveMap) liveMap.style.display = 'none';
+
+            // USER REQUEST: Show Path to Hospital
+            let mapContainer = document.getElementById('transport-map');
+            if (mapContainer && mapContainer.dataset.lastDest !== destQuery) {
+                // If it exists but destination changed, recreate it to update iframe
+                mapContainer.remove();
+                mapContainer = null;
+            }
+            
+            if (!mapContainer) {
+              mapContainer = document.createElement('div');
+              mapContainer.id = 'transport-map';
+              mapContainer.dataset.lastDest = destQuery;
+              mapContainer.style.height = '200px';
+              mapContainer.style.marginTop = '20px';
+              mapContainer.style.background = '#222';
+              
+              mapContainer.innerHTML = `<iframe width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=${destQuery}&t=m&z=14&output=embed&iwloc=Near"></iframe>`;
+              document.querySelector('#step-track').appendChild(mapContainer);
+            }
+          }
+          else if (status === "HEADS UP" || status === "ARRIVED") {
+            handleArrival(data);
+          }
+
+        } catch (e) {
+          console.log("Tracking poll...", e.message);
+          // 404 Handling: If we were Transporting, and now 404, we Arrived (Ambulance deleted self)
+          if (e.response && e.response.status === 404 && (lastStatus === "TRANSPORTING" || lastStatus === "HEADS UP" || lastStatus === "ON SCENE")) {
+            handleArrival({ status: "ARRIVED (Inferred)" });
+          }
+        }
+      }, 2000);
+    }
+
+    function handleArrival(data) {
+      if (trackingInterval) clearInterval(trackingInterval);
+
+      if (!window.historySaved) {
+        addToHistory(data); // Safely handles partial data
+        window.historySaved = true;
+
+        // Play Success Sound
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+        audio.play().catch(() => { });
+      }
+
+      const header = document.querySelector('#step-track h2');
+      const etaSpan = document.getElementById('track-eta');
+      const sub = document.querySelector('#step-track p');
+
+      header.innerHTML = '<i class="fa-solid fa-hospital"></i> ARRIVED AT ER';
+      header.style.color = '#22c55e';
+      etaSpan.innerText = "SAFE";
+      sub.innerText = "You have been admitted to Emergency Care.";
+
+      // Hide maps
+      const tm = document.getElementById('transport-map');
+      if (tm) tm.style.display = 'none';
+      const am = document.getElementById('ambulance-live-map');
+      if (am) am.style.display = 'none';
+      
+      // Auto Redirect after 5s
+      if (!window.redirectTimer) {
+        sub.innerText += " Redirecting to home in 5s...";
+        window.redirectTimer = setTimeout(() => {
+          localStorage.removeItem('ambulance_dispatched');
+          localStorage.removeItem('my_sos_id');
+          location.reload();
+        }, 5000);
+      }
+    }
+
+    function callAmbulance() {
+      // Old logic triggers SOS dispatch
+      document.querySelector('.btn-panic').innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> CALLING...';
+
+      // Use HTML5 Geolocation for Real Coordinates
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const payload = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          sendDispatch(payload);
+        }, () => {
+          // Fallback if denied
+          const payload = { lat: 26.2235, lng: 50.5876 };
+          sendDispatch(payload);
+        });
+      } else {
+        const payload = { lat: 26.2235, lng: 50.5876 };
+        sendDispatch(payload);
+      }
+    }
+
+    function sendDispatch(payload) {
+      axios.post('/api/emergency/dispatch', payload)
+        .then(res => {
+          // Go to Tracking with real ID
+          alert(`Dispatch Confirmed.\nNearest Ambulance: ${res.data.distance}\nETA: ${res.data.eta} mins`);
+          startTracking(res.data.id);
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Dispatch Failed: " + (err.response?.data?.message || err.message || "Unknown Error"));
+        });
+    }
+
+    // ---------------------------------------------
+    // Self Check-In Logic
+    // ---------------------------------------------
+    function goToStep(step) {
+      if (step === 2) {
+        document.getElementById('main-dashboard').style.display = 'none';
+        document.querySelector('.sos-bar').style.display = 'none';
+
+        // Show Check-In Form
+        const checkin = document.getElementById('step-checkin');
+        if (checkin) {
+          checkin.style.display = 'block';
+          checkin.style.animation = 'fadeUp 0.5s ease-out';
+        }
+      }
+    }
+
+    // --- NOTIFICATIONS ---
+    function showVolunteerToast() {
+      // Prevent dupes
+      if (document.getElementById('vol-toast')) return;
+
+      const toast = document.createElement('div');
+      toast.id = 'vol-toast';
+      toast.style.position = 'fixed';
+      toast.style.bottom = '20px';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%) translateY(100px)';
+      toast.style.background = 'rgba(15, 23, 42, 0.95)';
+      toast.style.border = '1px solid #eab308'; // Yellow
+      toast.style.padding = '1rem 1.5rem';
+      toast.style.borderRadius = '50px';
+      toast.style.display = 'flex';
+      toast.style.alignItems = 'center';
+      toast.style.gap = '1rem';
+      toast.style.zIndex = '9999';
+      toast.style.boxShadow = '0 10px 40px rgba(0,0,0,0.5)';
+      toast.style.color = 'white';
+      toast.style.backdropFilter = 'blur(10px)';
+      toast.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      toast.innerHTML = `
+            <div style="background:#eab308; color:black; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                <i class="fa-solid fa-person-running"></i>
+            </div>
+            <div>
+                <div style="font-weight:bold; font-size:1rem; color:#eab308;">HELP IS COMING</div>
+                <div style="font-size:0.8rem; color:#cbd5e1;">A nearby volunteer is responding.</div>
+            </div>
+        `;
+
+      document.body.appendChild(toast);
+
+      // Sound
+      new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e => console.log(e));
+
+      // Animate In
+      setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+      }, 100);
+
+      // Auto Hide after 10s
+      setTimeout(() => {
+        if (toast) {
+          toast.style.transform = 'translateX(-50%) translateY(100px)';
+          setTimeout(() => toast.remove(), 500);
+        }
+      }, 10000);
+    }
+
+
+    // --- COMPETITION FEATURES ---
+    function toggleDevices() {
+      document.getElementById('main-dashboard').style.display = 'none';
+      document.getElementById('step-devices').style.display = 'block';
+    }
+
+    function closeDevices() {
+      document.getElementById('step-devices').style.display = 'none';
+      document.getElementById('main-dashboard').style.display = 'block';
+    }
+
+    function toggleMesh() {
+      const btn = document.getElementById('mesh-btn');
+      const txt = document.getElementById('mesh-txt');
+      if (txt.innerText.includes("5G")) {
+        // Switch to Mesh
+        txt.innerText = "Mesh: Searching...";
+        btn.style.borderColor = "#fbbf24"; btn.style.color = "#fbbf24";
+        setTimeout(() => {
+          txt.innerText = "Mesh: Connected (3 Peers)";
+          btn.style.borderColor = "#f97316"; btn.style.color = "#f97316"; // Orange for Mesh
+          alert("📡 Switched to decentralized Mesh Network.\nSignal routed via nearby devices.");
+        }, 1500);
+      } else {
+        // Switch to 5G
+        txt.innerText = "5G: Online";
+        btn.style.borderColor = "#22c55e"; btn.style.color = "#22c55e";
+      }
+    }
+
+    async function simulateCardiacArrest() {
+      if (!confirm("⚠️ SIMULATION\nTrigger Automatic Cardiac Arrest Alert from Apex Watch?")) return;
+
+      try {
+        await axios.post('/api/emergency/dispatch', {
+          lat: 24.7136, lng: 46.6753,
+          source: "smart_watch",
+          vital_data: { hr: 0, status: "CARDIAC_ARREST" }
+        });
+        alert("✅ ALERT SENT\n911 Dispatched automatically by Watch.\nReason: No Pulse Detected.");
+        startTracking();
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function simulateCrash() {
+      if (!confirm("⚠️ SIMULATION\nTrigger 50mph Crash Alert from Tesla Computer?")) return;
+
+      try {
+        await axios.post('/api/emergency/dispatch', {
+          lat: 24.7136, lng: 46.6753,
+          source: "crash_sensor",
+          vital_data: { g_force: 5.2, airbags: "DEPLOYED" }
+        });
+        alert("✅ CRASH DETECTED\nEmergency Services Notified.\nG-Force: 5.2g\nAirbags: Deployed");
+        startTracking();
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function submitCheckIn() {
+      const name = document.getElementById('ci-name').value;
+      const symptom = document.getElementById('ci-symptom').value;
+      const eta = document.getElementById('ci-eta').value;
+
+      if (!name || !symptom) { alert("Please fill in Name and Symptoms."); return; }
+
+      try {
+        await axios.post('/api/incoming_self', {
+          name: name,
+          symptoms: symptom,
+          eta: eta
+        });
+
+        alert("✅ Hospital has been notified!\nWe will be expecting you in ~" + eta + " mins.");
+        location.reload(); // Reset to home
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    // --- HISTORY LOGIC ---
+    function addToHistory(data) {
+      const history = JSON.parse(localStorage.getItem('resq_history') || '[]');
+      const entry = {
+        date: new Date().toLocaleString(),
+        symptoms: data.symptoms || "Emergency Dispatch",
+        hospital: data.destination || "General Hospital",
+        status: "Admitted"
+      };
+      history.unshift(entry); // Add to top
+      localStorage.setItem('resq_history', JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const history = JSON.parse(localStorage.getItem('resq_history') || '[]');
+      const container = document.getElementById('history-list');
+      if (!container) return;
+
+      if (history.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#666; font-size:1rem; padding:2rem;">No previous emergency calls logged.</div>';
+        return;
+      }
+
+      container.innerHTML = history.map((h, index) => `
+            <div class="modern-history-card" onclick="showHistoryDetail(${index})">
+                <div style="font-size:0.8rem; color: #94a3b8; margin-bottom:0.5rem;">${h.date}</div>
+                <div style="font-weight:bold; color:white; font-size:1.1rem; margin-bottom:0.5rem;">${h.symptoms}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.9rem; color:#cbd5e1;"><i class="fa-solid fa-hospital"></i> ${h.hospital}</span>
+                    <span style="font-size:0.8rem; padding:2px 8px; border-radius:10px; background:rgba(34, 197, 94, 0.2); color:#4ade80;">${h.status}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function showHistoryDetail(index) {
+      const history = JSON.parse(localStorage.getItem('resq_history') || '[]');
+      const h = history[index];
+      if (!h) return;
+
+      document.getElementById('hist-modal-title').innerText = h.symptoms.toUpperCase();
+      document.getElementById('hist-modal-content').innerHTML = `
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;">Date:</strong> ${h.date}
+            </div>
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;">Destination:</strong> ${h.hospital}
+            </div>
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;">Status:</strong> <span style="color:#4ade80">${h.status}</span>
+            </div>
+            <hr style="border-color:rgba(255,255,255,0.1); margin: 1rem 0;">
+            <div style="background:rgba(0,0,0,0.3); padding:1rem; border-radius:8px;">
+                <div style="color:var(--accent-cyan); margin-bottom:0.5rem; font-weight:bold;">Vitals Log (Snapshot)</div>
+                <div style="display:flex; gap:1rem; font-family:monospace;">
+                    <div>HR: <span style="color:white">--</span></div>
+                    <div>BP: <span style="color:white">--/--</span></div>
+                    <div>O2: <span style="color:white">--%</span></div>
+                </div>
+                <div style="font-size:0.8rem; color:#666; margin-top:0.5rem;">* Vitals data not available for this record.</div>
+            </div>
+        `;
+      document.getElementById('history-detail-modal').style.display = 'flex';
+    }
+
+    // Particle Network Logic
+    const canvas = document.getElementById('bg-canvas');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      let width, height;
+      let particles = [];
+      const particleCount = 40;
+      const connectionDistance = 120;
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      class Particle {
+        constructor() {
+          this.x = Math.random() * width;
+          this.y = Math.random() * height;
+          this.vx = (Math.random() - 0.5) * 0.3;
+          this.vy = (Math.random() - 0.5) * 0.3;
+          this.size = Math.random() * 2 + 1;
+        }
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          if (this.x < 0 || this.x > width) this.vx *= -1;
+          if (this.y < 0 || this.y > height) this.vy *= -1;
+        }
+        draw() {
+          ctx.fillStyle = 'rgba(6, 182, 212, 0.3)';
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < particles.length; i++) {
+          let p1 = particles[i];
+          p1.update();
+          p1.draw();
+          for (let j = i + 1; j < particles.length; j++) {
+            let p2 = particles[j];
+            let dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+            if (dist < connectionDistance) {
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+
+    // Call on load
+    setTimeout(renderHistory, 500);
+  </script>
+
+  <!-- MediaPipe Hands (loaded on demand inside SignLang class) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <script>
+  // ══════════════════════════════════════════════════════════════════
+  //  SIGN LANGUAGE ENGINE - Embedded in Patient Portal
+  //  Full-word gesture recognition → AI Nurse (no separate page)
+  // ══════════════════════════════════════════════════════════════════
+
+  const SIGN_GESTURES = [
+    // emoji, label (sent to AI), ASL description, finger pattern
+    { emoji:'🆘', label:'HELP',              hint:'Open palm, push forward',   check: lm => allUp(lm) },
+    { emoji:'😣', label:'PAIN',              hint:'Fist (all fingers curled)',  check: lm => allDown(lm) },
+    { emoji:'💔', label:'CHEST PAIN',        hint:'Index only up',             check: lm => onlyIndex(lm) },
+    { emoji:'😮‍💨', label:'TROUBLE BREATHING', hint:'Index + Middle up (V)',      check: lm => vShape(lm) },
+    { emoji:'🩸', label:'BLEEDING',          hint:'All 4 fingers up, no thumb', check: lm => fourUp(lm) },
+    { emoji:'💫', label:'DIZZY',             hint:'Pinky only up',             check: lm => onlyPinky(lm) },
+    { emoji:'🌡️', label:'FEVER',             hint:'Ring + Pinky up',           check: lm => ringAndPinky(lm) },
+    { emoji:'🤢', label:'NAUSEA',            hint:'Middle only up',            check: lm => onlyMiddle(lm) },
+    { emoji:'💤', label:'UNCONSCIOUS',       hint:'Thumb up only',             check: lm => onlyThumb(lm) },
+    { emoji:'⚠️', label:'ALLERGIC REACTION', hint:'Index + Pinky up (Horns)',  check: lm => hornsShape(lm) },
+    { emoji:'📞', label:'CALL DOCTOR',       hint:'Thumb + Pinky (Phone Y)',   check: lm => yShape(lm) },
+    { emoji:'🤕', label:'HEAD INJURY',       hint:'Index + Middle + Ring up',  check: lm => threeUp(lm) },
+    { emoji:'🦵', label:'LEG PAIN',          hint:'Ring only up',              check: lm => onlyRing(lm) },
+    { emoji:'👁️', label:'EYE PROBLEM',       hint:'Index bent/hook',           check: lm => indexBent(lm) },
+    { emoji:'🫀', label:'HEART PROBLEM',     hint:'Middle + Ring up together',  check: lm => middleAndRing(lm) },
+  ];
+
+  // ── Finger helpers (y increases downward; tip < pip = extended) ──
+  function ext(lm, tip, pip) { return lm[tip].y < lm[pip].y; }
+  function allUp(lm)         { return ext(lm,8,6) && ext(lm,12,10) && ext(lm,16,14) && ext(lm,20,18); }
+  function allDown(lm)       { return !ext(lm,8,6) && !ext(lm,12,10) && !ext(lm,16,14) && !ext(lm,20,18); }
+  function onlyIndex(lm)     { return ext(lm,8,6) && !ext(lm,12,10) && !ext(lm,16,14) && !ext(lm,20,18); }
+  function onlyMiddle(lm)    { return !ext(lm,8,6) && ext(lm,12,10) && !ext(lm,16,14) && !ext(lm,20,18); }
+  function onlyRing(lm)      { return !ext(lm,8,6) && !ext(lm,12,10) && ext(lm,16,14) && !ext(lm,20,18); }
+  function onlyPinky(lm)     { return !ext(lm,8,6) && !ext(lm,12,10) && !ext(lm,16,14) && ext(lm,20,18); }
+  function onlyThumb(lm)     { return lm[4].x < lm[3].x && !ext(lm,8,6) && !ext(lm,12,10) && !ext(lm,16,14) && !ext(lm,20,18); }
+  function vShape(lm)        { return ext(lm,8,6) && ext(lm,12,10) && !ext(lm,16,14) && !ext(lm,20,18) && Math.abs(lm[8].x-lm[12].x) > 0.05; }
+  function fourUp(lm)        { return ext(lm,8,6) && ext(lm,12,10) && ext(lm,16,14) && ext(lm,20,18) && lm[4].x > lm[3].x; }
+  function yShape(lm)        { return lm[4].x < lm[3].x && ext(lm,20,18) && !ext(lm,8,6) && !ext(lm,12,10) && !ext(lm,16,14); }
+  function hornsShape(lm)    { return ext(lm,8,6) && !ext(lm,12,10) && !ext(lm,16,14) && ext(lm,20,18); }
+  function threeUp(lm)       { return ext(lm,8,6) && ext(lm,12,10) && ext(lm,16,14) && !ext(lm,20,18); }
+  function indexBent(lm)     { const d = Math.abs(lm[8].y - lm[5].y); return d < 0.07 && !ext(lm,12,10) && !ext(lm,16,14) && !ext(lm,20,18); }
+  function middleAndRing(lm) { return !ext(lm,8,6) && ext(lm,12,10) && ext(lm,16,14) && !ext(lm,20,18); }
+  function ringAndPinky(lm)  { return !ext(lm,8,6) && !ext(lm,12,10) && ext(lm,16,14) && ext(lm,20,18); }
+
+  // ── SignLang Engine ──
+  const signLang = {
+    open: false,
+    cameraInited: false,
+    handsModel: null,
+    mpCamera: null,
+    framesHeld: 0,
+    lastGestureIdx: -1,
+    REQUIRED_FRAMES: 45,   // ~1.5s at 30fps
+
+    toggle() {
+      this.open = !this.open;
+      const drawer = document.getElementById('sl-drawer');
+      const backdrop = document.getElementById('sl-backdrop');
+      const btn = document.getElementById('btn-sign-mode');
+      if (this.open) {
+        drawer.style.right = '0';
+        backdrop.style.display = 'block';
+        btn.style.background = 'rgba(56,189,248,0.3)';
+        this._buildGestureGrid();
+        if (!this.cameraInited) this._initCamera();
+      } else {
+        drawer.style.right = '-420px';
+        backdrop.style.display = 'none';
+        btn.style.background = 'rgba(56,189,248,0.12)';
+        if (this.mpCamera) this.mpCamera.stop();
+        this.cameraInited = false;
+        this.mpCamera = null;
+      }
+    },
+
+    _buildGestureGrid() {
+      const grid = document.getElementById('sl-gesture-grid');
+      grid.innerHTML = '';
+      SIGN_GESTURES.forEach((g, i) => {
+        const card = document.createElement('div');
+        card.className = 'sl-gesture-card';
+        card.id = 'sl-card-' + i;
+        card.innerHTML = `<span class="emoji">${g.emoji}</span><div><span class="label">${g.label}</span><span class="hint">${g.hint}</span></div>`;
+        card.onclick = () => this._sendToAI(g.label);
+        grid.appendChild(card);
+      });
+    },
+
+    _initCamera() {
+      this.cameraInited = true;
+      const videoEl = document.getElementById('sl-video');
+      const canvasEl = document.getElementById('sl-canvas');
+      const ctx = canvasEl.getContext('2d');
+      const loading = document.getElementById('sl-loading');
+
+      // Resize canvas to match video
+      videoEl.addEventListener('loadedmetadata', () => {
+        canvasEl.width = videoEl.videoWidth || 640;
+        canvasEl.height = videoEl.videoHeight || 480;
+      });
+
+      const hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+      hands.setOptions({ maxNumHands:1, modelComplexity:1, minDetectionConfidence:0.7, minTrackingConfidence:0.6 });
+      this.handsModel = hands;
+
+      hands.onResults(results => {
+        if (loading.style.display !== 'none') {
+          loading.style.opacity = '0';
+          setTimeout(() => loading.style.display = 'none', 400);
+        }
+
+        canvasEl.width = videoEl.videoWidth || 640;
+        canvasEl.height = videoEl.videoHeight || 480;
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+
+        const badge = document.getElementById('sl-badge-txt');
+        const dot = document.getElementById('sl-dot');
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          const lm = results.multiHandLandmarks[0];
+          drawConnectors(ctx, lm, HAND_CONNECTIONS, { color:'#0ea5e9', lineWidth:2 });
+          drawLandmarks(ctx, lm, { color:'#38bdf8', lineWidth:1, radius:3 });
+
+          // Match gesture
+          let matchIdx = -1;
+          for (let i = 0; i < SIGN_GESTURES.length; i++) {
+            try { if (SIGN_GESTURES[i].check(lm)) { matchIdx = i; break; } } catch(e) {}
+          }
+
+          if (matchIdx !== -1) {
+            const g = SIGN_GESTURES[matchIdx];
+            document.getElementById('sl-word-display').textContent = g.emoji + ' ' + g.label;
+            dot.style.background = '#38bdf8';
+            badge.textContent = 'Gesture: ' + g.label;
+
+            // Highlight active card
+            SIGN_GESTURES.forEach((_,i) => { const c = document.getElementById('sl-card-'+i); if(c) c.classList.remove('active'); });
+            const activeCard = document.getElementById('sl-card-'+matchIdx);
+            if (activeCard) activeCard.classList.add('active');
+
+            if (matchIdx === this.lastGestureIdx) {
+              this.framesHeld++;
+              const pct = Math.min((this.framesHeld / this.REQUIRED_FRAMES) * 100, 100);
+              document.getElementById('sl-progress').style.width = pct + '%';
+
+              if (this.framesHeld >= this.REQUIRED_FRAMES) {
+                this._sendToAI(g.label);
+                this.framesHeld = 0;
+                this.lastGestureIdx = -1;
+              }
+            } else {
+              this.lastGestureIdx = matchIdx;
+              this.framesHeld = 0;
+              document.getElementById('sl-progress').style.width = '0%';
+            }
+          } else {
+            this._resetDetection('Detecting…');
+          }
+        } else {
+          dot.style.background = '#64748b';
+          badge.textContent = 'No hand detected';
+          this._resetDetection('-');
+        }
+      });
+
+      const camera = new Camera(videoEl, {
+        onFrame: async () => { if(this.handsModel) await this.handsModel.send({ image: videoEl }); },
+        width: 640, height: 480
+      });
+      camera.start();
+      this.mpCamera = camera;
+    },
+
+    _resetDetection(label) {
+      document.getElementById('sl-word-display').textContent = label;
+      document.getElementById('sl-progress').style.width = '0%';
+      SIGN_GESTURES.forEach((_,i) => { const c = document.getElementById('sl-card-'+i); if(c) c.classList.remove('active'); });
+      this.framesHeld = 0;
+    },
+
+    _sendToAI(label) {
+      // 1. Fill the AI nurse input
+      const input = document.getElementById('ai-text-input');
+      if (input) { input.value = label; input.focus(); }
+
+      // 2. Trigger the AI protocol search
+      if (typeof searchFirstAid === 'function') searchFirstAid(label);
+
+      // 3. TTS feedback
+      if (typeof voice !== 'undefined') voice.speak('Sign detected: ' + label + '. Checking protocol.');
+
+      // 4. Add to history log
+      const histSection = document.getElementById('sl-history-section');
+      const histContainer = document.getElementById('sl-history');
+      if (histSection && histContainer) {
+        histSection.style.display = 'block';
+        const chip = document.createElement('span');
+        chip.textContent = label;
+        chip.style.cssText = 'background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:20px; padding:3px 10px; font-size:0.75rem; font-weight:700;';
+        histContainer.appendChild(chip);
+      }
+
+      // 5. Reset progress
+      document.getElementById('sl-progress').style.width = '0%';
+    }
+  };
+  </script>
+</body>
+</html>
+
+
+
+
+

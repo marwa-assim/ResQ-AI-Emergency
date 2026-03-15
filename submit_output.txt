@@ -1,0 +1,16 @@
+Sending Payload to http://127.0.0.1:5000/api/triage...
+Status Code: 200
+Response Text:
+{
+  "patient": {
+    "id": "TEST-1770582211",
+    "name": "Test Patient",
+    "priority": 3,
+    "score": 100
+  },
+  "position": 7,
+  "queue_length": 7,
+  "risk_level": "Critical",
+  "status": "triaged"
+}
+

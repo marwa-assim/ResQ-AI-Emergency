@@ -1,0 +1,58 @@
+1. Creating Patient TEST-BED-1770582529...
+2. Assigning to Bed 1...
+Assignment Status: 200
+{
+  "bed": {
+    "id": 1,
+    "label": "ER Room 1",
+    "patient": {
+      "age": 50,
+      "arrival_time": 1770582529.8252022,
+      "gender": "M",
+      "id": "TEST-BED-1770582529",
+      "name": "Bed Tester",
+      "priority": 0,
+      "symptoms_text": "General Checklist",
+      "vitals": {
+        "bp": "120/80",
+        "hr": 80,
+        "spo2": 98
+      }
+    },
+    "staff": [
+      "Dr. Ali",
+      "Nurse Mona",
+      "Dr. Fatima"
+    ]
+  },
+  "status": "assigned"
+}
+
+3. Fetching /api/beds...
+
+--- BED 1 DATA ---
+{
+  "id": 1,
+  "label": "ER Room 1",
+  "patient": {
+    "age": 50,
+    "arrival_time": 1770582529.8252022,
+    "gender": "M",
+    "id": "TEST-BED-1770582529",
+    "name": "Bed Tester",
+    "priority": 0,
+    "symptoms_text": "General Checklist",
+    "vitals": {
+      "bp": "120/80",
+      "hr": 80,
+      "spo2": 98
+    }
+  },
+  "staff": [
+    "Dr. Ali",
+    "Nurse Mona",
+    "Dr. Fatima"
+  ]
+}
+
+[FAIL] Bed 1 is not assigned to our patient.
