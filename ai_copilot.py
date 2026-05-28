@@ -84,15 +84,16 @@ class AICopilot:
             }
         }
 
-    def generate_plan(self, symptoms_text, priority_score):
+    def generate_plan(self, symptoms_text, priority_score, language="en"):
         """
         Generates a tailored care plan using Huawei Cloud ModelArts.
         Args:
             symptoms_text (str): Raw text from user (voice or typed).
             priority_score (int): 0-3 Criticality score from MindSpore model.
+            language (str): The requested response language.
         """
         # Call the Huawei Cloud API Wrapper
-        context_str = "Priority Level: " + str(priority_score)
+        context_str = f"Priority Level: {priority_score} | CRITICAL REQUIREMENT: You MUST formulate the entire response in the {language} language."
         plan = huawei_services.invoke_modelarts_copilot(symptoms_text, context_str)
         return plan
 

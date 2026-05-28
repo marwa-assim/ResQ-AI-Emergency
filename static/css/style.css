@@ -1,22 +1,38 @@
-:root {
-    --bg-color: #0b0c15;
-    --panel-color: #151621;
-    --text-primary: #e0e6ed;
-    --text-secondary: #94a3b8;
-    --accent-cyan: #06b6d4;
-    --accent-glow: rgba(6, 182, 212, 0.3);
+/* =========================================================================
+   RESQ AI - GLOBAL COMPETITION PREMIUM STYLESHEET
+   Aesthetics: Cyberpunk / Modern Medical / Glassmorphism
+   ========================================================================= */
 
-    --risk-critical: #ef4444;
-    --risk-high: #f97316;
-    --risk-moderate: #eab308;
-    --risk-low: #22c55e;
+:root {
+    --bg-base: #05050A; /* Extremely deep almost black blue */
+    --bg-panel: rgba(15, 23, 42, 0.4);
+    --bg-panel-hover: rgba(30, 41, 59, 0.6);
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    
+    --accent-cyan: #00f0ff;
+    --accent-magenta: #ff003c;
+    --accent-blue: #0ea5e9;
+    
+    --glow-cyan: rgba(0, 240, 255, 0.4);
+    --glow-magenta: rgba(255, 0, 60, 0.4);
+
+    --risk-critical: #ff003c; /* Neon Red */
+    --risk-high: #ff7300;     /* Neon Orange */
+    --risk-moderate: #facc15; /* Bright Yellow */
+    --risk-low: #00ff66;      /* Neon Green */
 
     --font-heading: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
 }
 
 body {
-    background-color: var(--bg-color);
+    background-color: var(--bg-base);
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.05), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(255, 0, 60, 0.05), transparent 25%);
+    background-attachment: fixed;
     color: var(--text-primary);
     font-family: var(--font-body);
     margin: 0;
@@ -24,264 +40,224 @@ body {
     overflow-x: hidden;
 }
 
-/* Animations */
-@keyframes pulse-glow {
-    0% {
-        box-shadow: 0 0 5px var(--accent-glow);
-    }
-
-    50% {
-        box-shadow: 0 0 20px var(--accent-glow);
-    }
-
-    100% {
-        box-shadow: 0 0 5px var(--accent-glow);
-    }
+/* =========================================
+   ANIMATIONS
+   ========================================= */
+@keyframes neon-pulse {
+    0%, 100% { text-shadow: 0 0 1px rgba(6, 182, 212, 0.3); }
+    50% { text-shadow: 0 0 0px transparent; }
 }
 
-@keyframes scan-line {
-    0% {
-        top: 0%;
-        opacity: 0;
-    }
-
-    10% {
-        opacity: 1;
-    }
-
-    90% {
-        opacity: 1;
-    }
-
-    100% {
-        top: 100%;
-        opacity: 0;
-    }
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
 }
 
-/* Utilities */
+@keyframes border-crawl {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* =========================================
+   GLOBAL COMPONENTS
+   ========================================= */
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 2rem;
 }
 
-.panel {
-    background: var(--panel-color);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+/* Premium Glass Panel */
+.glass-panel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-.title-glow {
-    color: var(--accent-cyan);
-    text-shadow: 0 0 10px var(--accent-glow);
-    font-family: var(--font-heading);
-    letter-spacing: 1px;
-}
-
-/* Kiosk Specific */
-.sensor-box {
-    border: 2px solid #334155;
-    border-radius: 12px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.3s ease;
-    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
 }
 
-.sensor-box.active {
+.glass-panel::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+}
+
+.glass-panel:hover {
+    border-color: rgba(0, 240, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 240, 255, 0.1);
+}
+
+.title-glow {
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Modern Button */
+.modern-btn {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-btn::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+.modern-btn:hover {
+    transform: translateY(-2px);
     border-color: var(--accent-cyan);
-    background: rgba(6, 182, 212, 0.05);
-    animation: pulse-glow 2s infinite;
+    box-shadow: 0 5px 15px var(--glow-cyan);
+    color: var(--accent-cyan);
 }
 
-.sensor-value {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-top: 0.5rem;
-    font-family: 'Courier New', monospace;
+.modern-btn:hover::after {
+    opacity: 1;
+    left: 100%;
+    transition: all 0.5s ease;
 }
 
-.id-card-visual {
-    width: 300px;
-    height: 180px;
-    background: linear-gradient(135deg, #1e293b, #0f172a);
+/* =========================================
+   DASHBOARD / TRIAGE SPECIFIC
+   ========================================= */
+.patient-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
-    margin: 2rem auto;
-    border-top: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 50px;
+    align-items: center;
+    transition: all 0.3s;
     position: relative;
 }
 
-.scan-beam {
+.patient-card:hover {
+    transform: translateX(10px);
+    background: rgba(30, 41, 59, 0.8);
+}
+
+/* Risk Borders */
+.patient-card::before {
+    content: '';
     position: absolute;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--accent-cyan);
-    box-shadow: 0 0 10px var(--accent-cyan);
-    animation: scan-line 2s infinite linear;
-    display: none;
+    left: 0; top: 0; bottom: 0; width: 4px;
+    border-radius: 12px 0 0 12px;
 }
 
-.scan-active .scan-beam {
-    display: block;
-}
+.priority-3::before { background: var(--risk-critical); box-shadow: 0 0 10px var(--risk-critical); }
+.priority-2::before { background: var(--risk-high); box-shadow: 0 0 10px var(--risk-high); }
+.priority-1::before { background: var(--risk-moderate); box-shadow: 0 0 10px var(--risk-moderate); }
+.priority-0::before { background: var(--risk-low); box-shadow: 0 0 10px var(--risk-low); }
 
-/* Dashboard Specific */
-@keyframes flashRed {
-    0% {
-        background: rgba(239, 68, 68, 0.1);
-        box-shadow: 0 0 5px var(--risk-critical);
-    }
-
-    50% {
-        background: rgba(239, 68, 68, 0.3);
-        box-shadow: 0 0 20px var(--risk-critical);
-    }
-
-    100% {
-        background: rgba(239, 68, 68, 0.1);
-        box-shadow: 0 0 5px var(--risk-critical);
-    }
-}
-
-.blinking-critical {
-    animation: flashRed 1s infinite alternate;
-    border: 1px solid var(--risk-critical);
-}
-
-.patient-card {
-    display: grid;
-    grid-template-columns: 80px 1fr 1fr 100px;
-    align-items: center;
-    background: var(--panel-color);
-    margin-bottom: 1rem;
-    padding: 1rem;
-    border-radius: 8px;
-    border-left: 6px solid grey;
-    transition: all 0.5s ease;
-    /* Smooth reorder */
-}
-
-.priority-3 {
-    border-left-color: var(--risk-critical);
-    border: 1px solid var(--risk-critical);
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.priority-2 {
-    border-left-color: var(--risk-high);
-    border: 1px solid var(--risk-high);
-}
-
-.priority-1 {
-    border-left-color: var(--risk-moderate);
-    border: 1px solid var(--risk-moderate);
-}
-
-.priority-0 {
-    border-left-color: var(--risk-low);
-    border: 1px solid var(--risk-low);
-}
-
-.vital-tag {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    margin-right: 8px;
-}
-
-/* Dashboard Layout Phase 3 */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    /* Equal split to give Queue space */
-    gap: 2rem;
-    height: calc(100vh - 180px);
-    /* Adjusted for ticker */
-}
-
-.column-header {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 1rem;
-    border-radius: 8px 8px 0 0;
-    text-align: center;
-    font-weight: bold;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-}
-
-.scroll-area {
-    height: 100%;
-    overflow-y: auto;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 0 0 8px 8px;
-    padding: 1rem;
-}
-
-/* Bed Map */
-.bed-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    /* STRICTLY 2 Columns per request */
-    grid-auto-rows: 150px;
-    /* Fixed row height */
-    gap: 1rem;
-    align-content: start;
-    /* Pack to top */
-}
-
+/* Bed Grid */
 .bed-card {
-    background: #0f172a;
-    border: 2px dashed #334155;
-    border-radius: 12px;
-    height: 150px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px dashed rgba(255,255,255,0.2);
+    border-radius: 16px;
+    min-height: 180px;
+    padding: 1rem;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
+    backdrop-filter: blur(10px);
 }
 
 .bed-card.occupied {
-    background: #1e293b;
     border-style: solid;
-    border-color: #475569;
+    border-color: rgba(255,255,255,0.1);
+    background: rgba(15, 23, 42, 0.8);
 }
 
 .bed-card.occupied.critical {
     border-color: var(--risk-critical);
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    box-shadow: inset 0 0 30px rgba(255, 0, 60, 0.1), 0 0 15px rgba(255, 0, 60, 0.2);
 }
 
-.staff-badges {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    display: flex;
-    gap: 5px;
-    z-index: 2;
-    /* Above ECG */
+/* Kiosk Specific */
+.sensor-box {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s;
+    backdrop-filter: blur(10px);
 }
 
-/* ECG Canvas */
+.sensor-box.active {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 20px var(--glow-cyan);
+    transform: scale(1.05);
+}
+
+.sensor-value {
+    font-size: 3.5rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    background: linear-gradient(to right, #fff, var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Fix missing classes for Dashboard Layout */
+.bed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.column-header {
+    font-size: 1.3rem;
+    font-family: var(--font-heading);
+    color: var(--accent-cyan);
+    margin-bottom: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    padding-bottom: 0.5rem;
+}
+
 .ecg-container {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.3;
-    /* Subtle background effect */
-    pointer-events: none;
+    top: 0; left: 0; width: 100%; height: 100%;
     z-index: 1;
+    opacity: 0.35;
+    pointer-events: none;
+    border-radius: 16px;
     overflow: hidden;
-    border-radius: 12px;
 }
 
 .ecg-canvas {
@@ -289,36 +265,20 @@ body {
     height: 100%;
 }
 
-.staff-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #475569;
+.staff-badges {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    border: 1px solid white;
+    gap: -8px;
+    position: absolute;
+    top: 10px; right: 10px;
+    z-index: 2;
 }
 
-/* Draggable */
-.patient-card[draggable="true"] {
-    cursor: grab;
-}
-
-.bed-card.drag-over {
-    background: rgba(6, 182, 212, 0.2);
-    border-color: var(--accent-cyan);
-    border-style: solid;
-}
-
-/* Ticker Animation */
-@keyframes scroll-left {
-    0% {
-        transform: translateX(100%);
-    }
-
-    100% {
-        transform: translateX(-100%);
-    }
+.staff-avatar {
+    width: 26px; height: 26px;
+    background: var(--accent-blue);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: bold; border: 2px solid #0f172a;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
 }

@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<style>
+    #map-container { width: 100%; height: calc(100vh - 100px); border-radius: 16px; overflow: hidden; border: 1px solid rgba(6,182,212,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .leaflet-popup-content-wrapper { background: rgba(15,23,42,0.9); color: white; backdrop-filter: blur(10px); border: 1px solid var(--accent-cyan); border-radius: 8px; }
+    .leaflet-popup-tip { background: rgba(15,23,42,0.9); border: 1px solid var(--accent-cyan); }
+    .leaflet-container { background: #0f172a; font-family: 'Outfit', sans-serif; }
+    .custom-div-icon { background: transparent; border: none; }
+    .pulse-marker { width: 20px; height: 20px; background: var(--risk-critical); border-radius: 50%; box-shadow: 0 0 0 0 rgba(239,68,68, 1); animation: pulse-red 2s infinite; }
+    .hospital-marker { font-size: 24px; color: var(--accent-cyan); text-shadow: 0 0 10px var(--accent-cyan); }
+    .ambulance-marker { font-size: 20px; color: #fbbf24; text-shadow: 0 0 10px #fbbf24; transition: all 1s ease; }
+</style>
+
+<div class="container" style="max-width: 1600px; padding: 2rem;">
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 class="title-glow" style="margin: 0;"><i class="fa-solid fa-map-location-dot"></i> Live Command Map</h1>
+        <div style="display: flex; gap: 1rem;">
+            <span class="badge" style="background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan);"><i class="fa-solid fa-hospital"></i> {{ hospitals|length }} Facilities</span>
+            <span class="badge" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;"><i class="fa-solid fa-truck-medical"></i> {{ ambulances|length }} Active Units</span>
+        </div>
+    </header>
+
+    <div id="map-container"></div>
+</div>
+
+<script>
+    // Initialize Map centered on Bahrain (Default for app)
+    var map = L.map('map-container').setView([26.2235, 50.5876], 12);
+
+    // Add Dark Mode CartoDB Map Tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    // Load Hospitals
+    const hospitals = {{ hospitals|tojson }};
+    hospitals.forEach(h => {
+        let icon = L.divIcon({ className: 'custom-div-icon', html: '<i class="fa-solid fa-square-h hospital-marker"></i>', iconSize: [30, 30], iconAnchor: [15, 15] });
+        L.marker([h.lat, h.lng], {icon: icon}).addTo(map)
+            .bindPopup(`<strong>${h.name}</strong><br>Capacity: ${h.capacity}<br>Available Beds: ${h.available_beds}`);
+    });
+
+    // Load Ambulances
+    const ambulances = {{ ambulances|tojson }};
+    let ambMarkers = {};
+    ambulances.forEach(a => {
+        if (a.lat && a.lng) {
+            let icon = L.divIcon({ className: 'custom-div-icon', html: '<i class="fa-solid fa-truck-medical ambulance-marker"></i>', iconSize: [30, 30], iconAnchor: [15, 15] });
+            let marker = L.marker([a.lat, a.lng], {icon: icon}).addTo(map)
+                .bindPopup(`<strong>Unit: ${a.unit_id}</strong><br>Status: ${a.status}`);
+            ambMarkers[a.id] = marker;
+        }
+    });
+
+    // Listen for WebSocket Emergency Dispatches to place pulsing SOS markers
+    const socket = io();
+    socket.on('new_emergency', function(data) {
+        let icon = L.divIcon({ className: 'custom-div-icon', html: '<div class="pulse-marker"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
+        let lat = data.full_data?.lat || 26.22 + (Math.random()*0.05);
+        let lng = data.full_data?.lng || 50.58 + (Math.random()*0.05);
+        
+        let marker = L.marker([lat, lng], {icon: icon}).addTo(map)
+            .bindPopup(`<strong style="color:#f87171">SOS ALERT</strong><br>ID: ${data.id}<br>${data.symptoms}`).openPopup();
+            
+        map.flyTo([lat, lng], 14, {animate: true, duration: 1.5});
+    });
+</script>
+{% endblock %}

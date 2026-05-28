@@ -13,7 +13,7 @@ try:
     import mindspore
     from mindspore import load_checkpoint, load_param_into_net, Tensor
     import mindspore.context as context
-    from train_risk_model_mindspore import RiskModel
+    from train_risk_model_advanced import HybridRiskModel
     context.set_context(mode=context.GRAPH_MODE, device_target="CPU")
     MINDSPORE_AVAILABLE = True
     print("[MindSpore] Library loaded successfully.")
@@ -21,20 +21,25 @@ except ImportError:
     MINDSPORE_AVAILABLE = False
     print("[MindSpore] Library not installed. Using clinical rule-based fallback.")
 
-MODEL_CKPT  = "mimic_risk_model.ckpt"
-SCALING_JSON = "mindspore_scaling.json"
+MODEL_CKPT  = "mimic_risk_model_advanced.ckpt"
+SCALING_JSON = "mindspore_scaling_advanced.json"
+VOCAB_JSON = "mindspore_vocab.json"
 
 _model = None
 _stats = None
+_vocab = None
 
 def load_model():
-    global _model, _stats
+    global _model, _stats, _vocab
     if not MINDSPORE_AVAILABLE:
         return
-    if os.path.exists(MODEL_CKPT) and os.path.exists(SCALING_JSON):
+    if os.path.exists(MODEL_CKPT) and os.path.exists(SCALING_JSON) and os.path.exists(VOCAB_JSON):
         with open(SCALING_JSON, "r") as f:
             _stats = json.load(f)
-        net = RiskModel(input_dim=7, hidden_dim=64, output_dim=5)
+        with open(VOCAB_JSON, "r") as f:
+            _vocab = json.load(f)
+            
+        net = HybridRiskModel(input_dim=7 + len(_vocab), hidden_dim=128, output_dim=5)
         param_dict = load_checkpoint(MODEL_CKPT)
         load_param_into_net(net, param_dict)
         _model = net
@@ -47,7 +52,7 @@ load_model()
 def predict(features: dict):
     """
     Predict ESI triage level and risk score.
-    features: dict with keys: temperature, heartrate, resprate, o2sat, sbp, dbp, pain
+    features: dict with keys: temperature, heartrate, resprate, o2sat, sbp, dbp, pain, symptoms
     Returns: (esi_level: int 1-5, risk_score: float 0.0-1.0)
     """
     NUM_COLS = ['temperature', 'heartrate', 'resprate', 'o2sat', 'sbp', 'dbp', 'pain']
@@ -59,9 +64,11 @@ def predict(features: dict):
     temp = float(features.get('temperature', 37))
     dbp  = float(features.get('dbp',         80))
     pain = float(features.get('pain',         0))
+    
+    symptoms = str(features.get('symptoms', '')).lower()
 
     # ── MindSpore neural network inference ──
-    if _model is not None and _stats is not None:
+    if _model is not None and _stats is not None and _vocab is not None:
         try:
             raw = [temp, hr, rr, spo2, sbp, dbp, pain]
             scaled = []
@@ -69,8 +76,14 @@ def predict(features: dict):
                 mu = _stats[col]['mean']
                 sigma = _stats[col]['std'] or 1.0
                 scaled.append(max(-5.0, min(5.0, (raw[i] - mu) / sigma)))
+                
+            # NLP Bag of Words
+            nlp_vec = [1.0 if word in symptoms else 0.0 for word in _vocab]
+            
+            # Combine features
+            final_features = scaled + nlp_vec
 
-            x = Tensor(np.array([scaled], dtype=np.float32))
+            x = Tensor(np.array([final_features], dtype=np.float32))
             logits = _model(x).asnumpy()[0]
 
             # Softmax to get class probabilities

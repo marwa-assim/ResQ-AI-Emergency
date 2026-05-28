@@ -1,4 +1,4 @@
-﻿{% extends "layout.html" %}
+{% extends "layout.html" %}
 
 {% block content %}
 <div class="container" style="max-width: 800px; margin-top: 2rem;">
@@ -130,7 +130,7 @@
         </p>
 
         <div id="id-visual" class="id-card-visual"
-            style="margin: 2rem auto; border-color: rgba(6,182,212,0.5); border-width: 2px; border-style: solid; border-radius: 12px; background: rgba(0,0,0,0.2);">
+            style="position: relative; width: 280px; height: 180px; margin: 2rem auto; border-color: rgba(6,182,212,0.5); border-width: 2px; border-style: solid; border-radius: 12px; background: rgba(0,0,0,0.2); overflow: hidden;">
             <div class="scan-beam"></div>
             <i class="fa-regular fa-id-badge"
                 style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 5rem; color: rgba(255,255,255,0.2);"></i>
@@ -168,41 +168,41 @@
 
     <!-- Step 2: Vitals -->
     <div id="step-2" class="panel wizard-step" style="display: none; background: rgba(15, 23, 42, 0.85);">
-        <h1 class="title-glow" style="text-align:center;"><i class="fa-solid fa-heart-pulse"></i> Vitals Station</h1>
+        <h1 class="title-glow" style="text-align:center; cursor:default;" ondblclick="triggerSimulation()"><i class="fa-solid fa-heart-pulse"></i> Vitals Station</h1>
         <p style="text-align:center; color:#cbd5e1;">Please use the attached sensors to measure your vitals.</p>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
             <!-- HR -->
-            <div class="interactive-card" onclick="simulateVital('hr')" style="animation-delay: 0s;">
+            <div class="interactive-card hardware-card" data-type="hr" style="animation-delay: 0s;">
                 <i class="fa-solid fa-heart" style="color: #ef4444; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Heart Rate</h3>
                 <div id="val-hr" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--</div>
-                <div id="btn-hr" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Measure</div>
+                <div id="btn-hr" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Waiting for Hardware...</div>
             </div>
 
             <!-- SPO2 -->
-            <div class="interactive-card delay-1" onclick="simulateVital('spo2')">
+            <div class="interactive-card delay-1 hardware-card" data-type="spo2">
                 <i class="fa-solid fa-lungs" style="color: #06b6d4; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">SpO2</h3>
                 <div id="val-spo2" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--</div>
-                <div id="btn-spo2" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Measure</div>
+                <div id="btn-spo2" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Waiting for Hardware...</div>
             </div>
 
             <!-- BP -->
-            <div class="interactive-card delay-2" onclick="simulateVital('bp')">
+            <div class="interactive-card delay-2 hardware-card" data-type="bp">
                 <i class="fa-solid fa-stethoscope" style="color: #eab308; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Blood Pressure</h3>
                 <div id="val-bp" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--/--</div>
-                <div id="btn-bp" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Inflate</div>
+                <div id="btn-bp" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Waiting for Cuff...</div>
             </div>
 
             <!-- Temp -->
-            <div class="interactive-card delay-3" onclick="simulateVital('temp')">
+            <div class="interactive-card delay-3 hardware-card" data-type="temp">
                 <i class="fa-solid fa-temperature-half"
                     style="color: #f97316; font-size: 2.5rem; margin-bottom:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Temperature</h3>
                 <div id="val-temp" class="sensor-value" style="font-size:1.5rem; font-weight:bold;">--</div>
-                <div id="btn-temp" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Tap to Scan</div>
+                <div id="btn-temp" style="font-size:0.8rem; color:#94a3b8; margin-top:0.5rem;">Waiting for Hardware...</div>
             </div>
         </div>
 
@@ -258,6 +258,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/kiosk.js') }}"></script>
 <script>
     // Particle Network Animation

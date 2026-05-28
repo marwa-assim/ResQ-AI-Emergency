@@ -96,39 +96,69 @@ function submitManualEntry() {
 }
 
 // -------------------------
-// 2. Vitals Simulation
+// 2. Hardware Socket Integration
 // -------------------------
-function simulateVital(type) {
-    const btn = document.getElementById(`btn-${type}`);
-    const display = document.getElementById(`val-${type}`);
+// Initialize Socket.io
+const socket = io();
 
-    if (!btn || btn.disabled) return;
+socket.on('hardware_vitals_scanned', function(data) {
+    if (currentStep !== 2) return; // Only process if on vitals step
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Measuring...';
+    // Real hardware usually sends hr and spo2, but let's map whatever it sends
+    if (data.hr) {
+        state.vitals.hr = data.hr;
+        document.getElementById('val-hr').innerText = data.hr;
+        document.getElementById('val-hr').style.color = 'var(--accent-cyan)';
+        document.getElementById('btn-hr').innerText = 'Synced';
+    }
+    if (data.spo2) {
+        state.vitals.spo2 = data.spo2;
+        document.getElementById('val-spo2').innerText = data.spo2;
+        document.getElementById('val-spo2').style.color = 'var(--accent-cyan)';
+        document.getElementById('btn-spo2').innerText = 'Synced';
+    }
+    if (data.temp) {
+        state.vitals.temp = data.temp;
+        document.getElementById('val-temp').innerText = data.temp;
+        document.getElementById('val-temp').style.color = 'var(--accent-cyan)';
+        document.getElementById('btn-temp').innerText = 'Synced';
+    }
+    if (data.sys_bp && data.dia_bp) {
+        state.vitals.sys_bp = data.sys_bp;
+        state.vitals.dia_bp = data.dia_bp;
+        document.getElementById('val-bp').innerText = `${data.sys_bp}/${data.dia_bp}`;
+        document.getElementById('val-bp').style.color = 'var(--accent-cyan)';
+        document.getElementById('btn-bp').innerText = 'Synced';
+    }
+});
 
-    // Simulated Delay
-    setTimeout(() => {
-        let val = 0;
-        // Random "Normal-ish" values by default
-        if (type === 'hr') val = Math.floor(Math.random() * (100 - 60) + 60);
-        if (type === 'spo2') val = Math.floor(Math.random() * (100 - 95) + 95);
-        if (type === 'temp') val = (Math.random() * (37.5 - 36.5) + 36.5).toFixed(1);
-        if (type === 'bp') {
-            const sys = Math.floor(Math.random() * (130 - 110) + 110);
-            const dia = Math.floor(Math.random() * (85 - 70) + 70);
-            val = `${sys}/${dia}`;
-            state.vitals.sys_bp = sys;
-            state.vitals.dia_bp = dia;
-        } else {
-            state.vitals[type] = parseFloat(val);
-        }
+// Hidden simulation for testing (double click Title)
+function triggerSimulation() {
+    ['hr', 'spo2', 'temp', 'bp'].forEach(type => {
+        const btn = document.getElementById(`btn-${type}`);
+        const display = document.getElementById(`val-${type}`);
 
-        display.innerText = val;
-        display.style.color = 'var(--accent-cyan)';
-        btn.innerHTML = 'Retake';
-        btn.disabled = false;
-    }, 2000);
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Measuring...';
+
+        setTimeout(() => {
+            let val = 0;
+            if (type === 'hr') val = Math.floor(Math.random() * (100 - 60) + 60);
+            if (type === 'spo2') val = Math.floor(Math.random() * (100 - 95) + 95);
+            if (type === 'temp') val = (Math.random() * (37.5 - 36.5) + 36.5).toFixed(1);
+            if (type === 'bp') {
+                const sys = Math.floor(Math.random() * (130 - 110) + 110);
+                const dia = Math.floor(Math.random() * (85 - 70) + 70);
+                val = `${sys}/${dia}`;
+                state.vitals.sys_bp = sys;
+                state.vitals.dia_bp = dia;
+            } else {
+                state.vitals[type] = parseFloat(val);
+            }
+            display.innerText = val;
+            display.style.color = 'var(--accent-cyan)';
+            btn.innerHTML = 'Retake';
+        }, Math.random() * 1000 + 500);
+    });
 }
 
 // -------------------------
@@ -158,16 +188,38 @@ async function submitTriage() {
 
     try {
         const res = await axios.post('/api/triage', payload);
+        const data = res.data;
+        const p = data.patient;
+        
+        let color = "var(--risk-low)";
+        let icon = "fa-circle-check";
+        let prioLabel = "Normal / Level 0";
+        if (p.priority === 1) { color = "var(--risk-high)"; icon = "fa-circle-exclamation"; prioLabel = "Urgent / Level 1"; }
+        if (p.priority === 2) { color = "var(--risk-critical)"; icon = "fa-truck-medical"; prioLabel = "Emergency / Level 2"; }
+        if (p.priority >= 3) { color = "red"; icon = "fa-skull-crossbones"; prioLabel = "Critical / Resuscitation"; }
+
         // Show Success
         document.getElementById('step-3').innerHTML = `
-            <div style="text-align: center; margin-top: 5rem;">
-                <i class="fa-solid fa-circle-check" style="font-size: 5rem; color: var(--risk-low);"></i>
-                <h1>Checking In...</h1>
-                <p>Please take a seat. Your queue number is being generated.</p>
+            <div style="text-align: center; margin-top: 3rem;">
+                <i class="fa-solid ${icon}" style="font-size: 5rem; color: ${color}; margin-bottom: 1rem;"></i>
+                <h1 style="color: ${color}">Triage Complete</h1>
+                
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid ${color}; padding: 2rem; border-radius: 12px; max-width: 400px; margin: 2rem auto; text-align: left;">
+                    <div style="font-size: 1.2rem; color: white; margin-bottom: 0.5rem;"><b>Patient:</b> ${p.name}</div>
+                    <div style="font-size: 1.2rem; color: white; margin-bottom: 0.5rem;"><b>Priority:</b> <span style="color: ${color}">${prioLabel}</span></div>
+                    <div style="font-size: 1.2rem; color: white; margin-bottom: 0.5rem;"><b>AI Risk Score:</b> ${p.score}%</div>
+                    <hr style="border-color: #333; margin: 1rem 0;">
+                    <div style="font-size: 1.5rem; text-align: center; color: var(--accent-cyan);">
+                        <b>Queue Number: #${data.position}</b>
+                    </div>
+                </div>
+                
+                <p style="color: #94a3b8; font-size: 1.1rem;">Please proceed to the waiting area. The doctor will see you shortly.</p>
+                <button onclick="window.location.reload()" style="margin-top: 1rem; background: white; color: black; padding: 0.8rem 2.5rem; border: none; font-weight: bold; border-radius: 30px; cursor: pointer;">Done</button>
             </div>
         `;
-        // Redirect after 3s
-        setTimeout(() => window.location.href = '/', 4000);
+        
+        // Remove auto-redirect so the patient has time to read it!
     } catch (e) {
         alert("Submission Failed");
     }

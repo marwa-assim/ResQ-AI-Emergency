@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -54,18 +54,51 @@
         .goog-te-gadget-simple .goog-te-menu-value { color: #e2e8f0 !important; }
         .goog-te-gadget-simple img { display: none !important; }
         .goog-te-banner-frame, .skiptranslate > font { display: none !important; }
-        body { top: 0 !important; }
+        body { top: 0 !important; margin: 0; }
+        
+        /* Global Sidebar styles */
+        .global-sidebar {
+            position: fixed; top: 0; left: 0; height: 100vh; width: 60px;
+            background: rgba(15,23,42,0.85); backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(6,182,212,0.2);
+            display: flex; flex-direction: column; align-items: center; padding-top: 20px;
+            z-index: 9000; transition: width 0.3s ease; overflow: hidden;
+        }
+        .global-sidebar:hover { width: 220px; align-items: flex-start; }
+        .sidebar-link {
+            color: #94a3b8; text-decoration: none; padding: 15px; width: 100%; box-sizing: border-box;
+            display: flex; align-items: center; gap: 15px; font-family: 'Outfit', sans-serif;
+            transition: all 0.2s; white-space: nowrap; border-left: 3px solid transparent;
+        }
+        .sidebar-link i { font-size: 1.2rem; min-width: 30px; text-align: center; }
+        .sidebar-link:hover { color: #06b6d4; background: rgba(6,182,212,0.1); border-left-color: #06b6d4; }
+        .app-wrapper { margin-left: 60px; transition: margin-left 0.3s ease; width: calc(100% - 60px); min-height: 100vh; }
     </style>
 </head>
 
 <body>
+    <!-- Global Sidebar -->
+    {% include 'sidebar.html' %}
+
     <!-- Language Switcher (top-right corner) -->
     <div id="translate-bar">
         <i class="fa-solid fa-language"></i>
         <div id="google_translate_element"></div>
     </div>
 
+    <!-- Socket.IO Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+
     <div class="app-wrapper">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; background: rgba(239, 68, 68, 0.9); color: white; padding: 15px 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-family: 'Outfit', sans-serif;">
+              {% for message in messages %}
+                <div><i class="fa-solid fa-circle-exclamation"></i> {{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </div>
 

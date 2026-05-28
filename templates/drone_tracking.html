@@ -1,0 +1,213 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<style>
+    #map-container { width: 100%; height: 500px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(6,182,212,0.2); }
+    .drone-marker { font-size: 28px; color: var(--accent-cyan); text-shadow: 0 0 15px var(--accent-cyan); }
+    .video-container { width: 100%; height: 400px; background: #000; border-radius: 16px; overflow: hidden; border: 1px solid var(--accent-magenta); margin-top: 20px; position: relative; }
+    .cam-overlay { position: absolute; top: 10px; left: 10px; color: #ff003c; font-family: monospace; font-size: 1.2rem; z-index: 10; text-shadow: 0 0 5px black; font-weight: bold; }
+
+    /* Modern Dispatch Button */
+    .btn-dispatch {
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        padding: 0 30px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+    }
+    .btn-dispatch:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+        background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+    }
+    .btn-dispatch:active {
+        transform: translateY(1px);
+    }
+    .btn-dispatch i {
+        font-size: 1.3rem;
+        animation: rocketPulse 2s infinite;
+    }
+    @keyframes rocketPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+
+    /* Modern Dropdowns */
+    .modern-select {
+        background: rgba(15, 23, 42, 0.8);
+        border: 2px solid rgba(6, 182, 212, 0.3);
+        color: white;
+        padding: 12px 16px;
+        font-size: 1.1rem;
+        border-radius: 8px;
+        outline: none;
+        transition: all 0.3s ease;
+        appearance: none;
+        cursor: pointer;
+    }
+    .modern-select:focus {
+        border-color: var(--accent-cyan);
+        box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+    .modern-select option {
+        background: #0f172a;
+        color: white;
+        padding: 10px;
+    }
+</style>
+
+<div class="container" style="max-width: 1400px; padding: 2rem;">
+    <header style="margin-bottom: 2rem;">
+        <h1 class="title-glow"><i class="fa-solid fa-helicopter"></i> AED Drone Dispatch Command</h1>
+        <p style="color: var(--text-secondary);">Hospital Admin View - Dispatch automated drones to critical coordinates.</p>
+    </header>
+
+    <div class="grid-system" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Map View -->
+        <div class="glass-panel">
+            <h3><i class="fa-solid fa-map-location-dot"></i> Live GPS Tracking</h3>
+            <div id="map-container"></div>
+            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; gap: 10px;">
+                    <select id="drone-select" class="modern-select" style="flex: 1;">
+                        <option value="">-- Select Available Drone --</option>
+                        {% for d in drones %}
+                        <option value="{{ d.id }}" data-name="{{ d.call_sign }}">{{ d.call_sign }} ({{ d.status }}) - Bat: {{ d.battery }}%</option>
+                        {% endfor %}
+                    </select>
+                    <select id="dest-select" class="modern-select" style="flex: 1;" onchange="updateCoordinates()">
+                        <option value="custom" data-name="Custom Coordinates">Custom Location</option>
+                        {% for h in hospitals %}
+                        <option value="{{ h.lat }},{{ h.lng }}">{{ h.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="target-lat" placeholder="Latitude" class="input-neon" style="flex: 1;" value="26.2300">
+                    <input type="text" id="target-lng" placeholder="Longitude" class="input-neon" style="flex: 1;" value="50.5900">
+                    <button class="btn-dispatch" onclick="dispatchDrone()"><i class="fa-solid fa-rocket"></i> DISPATCH</button>
+                </div>
+            </div>
+            <script>
+                function updateCoordinates() {
+                    let val = document.getElementById('dest-select').value;
+                    if (val !== 'custom') {
+                        let coords = val.split(',');
+                        document.getElementById('target-lat').value = coords[0];
+                        document.getElementById('target-lng').value = coords[1];
+                    }
+                }
+            </script>
+        </div>
+
+        <!-- Camera View -->
+        <div class="glass-panel">
+            <h3><i class="fa-solid fa-video"></i> FLIR Camera Feed</h3>
+            <div class="video-container">
+                <div class="cam-overlay">🔴 REC | ALT: 400ft | SPD: 65km/h</div>
+                <!-- Simulated Drone Feed -->
+                <video autoplay loop muted style="width: 100%; height: 100%; object-fit: cover;">
+                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var map = L.map('map-container').setView([26.2235, 50.5876], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let droneMarker = null;
+    let flightPath = null;
+
+    function dispatchDrone() {
+        let droneId = document.getElementById('drone-select').value;
+        if(!droneId) return alert('Please select a drone first.');
+        
+        let destLat = parseFloat(document.getElementById('target-lat').value);
+        let destLng = parseFloat(document.getElementById('target-lng').value);
+        
+        let droneSelect = document.getElementById('drone-select');
+        let destSelect = document.getElementById('dest-select');
+        let droneName = droneSelect.options[droneSelect.selectedIndex].getAttribute('data-name');
+        let destName = destSelect.options[destSelect.selectedIndex] ? destSelect.options[destSelect.selectedIndex].text : 'Custom Location';
+
+        axios.post('/api/drone/dispatch', {lat: destLat, lng: destLng, drone_id: droneId})
+            .then(res => {
+                let startLat = res.data.start_lat || 26.2235;
+                let startLng = res.data.start_lng || 50.5876;
+                
+                alert(res.data.message);
+                if(droneMarker) map.removeLayer(droneMarker);
+                if(flightPath) map.removeLayer(flightPath);
+                
+                // Draw flight path
+                flightPath = L.polyline([[startLat, startLng], [destLat, destLng]], {
+                    color: '#ef4444',
+                    weight: 4,
+                    opacity: 0.8,
+                    dashArray: '10, 10'
+                }).addTo(map);
+                
+                // Add markers for Source and Destination
+                L.marker([startLat, startLng]).addTo(map).bindTooltip(`<strong>Base Station</strong><br>${droneName}`, {permanent: true, direction: 'right'}).openTooltip();
+                L.marker([destLat, destLng]).addTo(map).bindTooltip(`<strong>Destination</strong><br>${destName}`, {permanent: true, direction: 'left'}).openTooltip();
+
+                let icon = L.divIcon({ className: 'custom-div-icon', html: '<i class="fa-solid fa-helicopter drone-marker"></i>', iconSize: [40, 40] });
+                droneMarker = L.marker([startLat, startLng], {icon: icon, zIndexOffset: 1000}).addTo(map)
+                    .bindPopup(`<strong>${droneName}</strong><br>In Flight`).openPopup();
+                
+                map.fitBounds(flightPath.getBounds(), {padding: [50, 50]});
+
+                // Animate flight & FLIR Camera
+                let progress = 0;
+                let duration = 6000; // 6 seconds flight for better visual
+                let startTime = null;
+                let camOverlay = document.querySelector('.cam-overlay');
+                
+                function animateFlight(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    progress = (timestamp - startTime) / duration;
+                    
+                    if (progress <= 1) {
+                        let currentLat = startLat + (destLat - startLat) * progress;
+                        let currentLng = startLng + (destLng - startLng) * progress;
+                        droneMarker.setLatLng([currentLat, currentLng]);
+                        
+                        // Update FLIR Camera Text dynamically
+                        let alt = Math.floor(400 + Math.sin(progress * Math.PI) * 50); // slight arc
+                        let speed = Math.floor(65 + Math.random() * 5); // fluctuating speed
+                        camOverlay.innerHTML = `🔴 LIVE FLIGHT | ALT: ${alt}ft | SPD: ${speed}km/h | TARGET: ${destName}`;
+                        
+                        requestAnimationFrame(animateFlight);
+                    } else {
+                        droneMarker.setLatLng([destLat, destLng]);
+                        droneMarker.getPopup().setContent(`<strong>${droneName}</strong><br>Arrived at ${destName}!`);
+                        camOverlay.innerHTML = `✅ ARRIVED | ALT: 0ft | SPD: 0km/h | LOC: ${destName}`;
+                        camOverlay.style.color = '#00ff88';
+                    }
+                }
+                requestAnimationFrame(animateFlight);
+            })
+            .catch(err => alert(err.response?.data?.error || "Failed to dispatch"));
+    }
+</script>
+{% endblock %}

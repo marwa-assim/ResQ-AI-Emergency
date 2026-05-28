@@ -1,4 +1,4 @@
-﻿{% extends "layout.html" %}
+{% extends "layout.html" %}
 
 {% block content %}
 <div class="container" style="max-width: 1400px; position:relative; z-index:1;">
@@ -77,6 +77,13 @@
                 <span class="cert-badge"><i class="fa-solid fa-heart-pulse"></i> CPR</span>
                 <span class="cert-badge"><i class="fa-solid fa-droplet"></i> Stop Bleed</span>
                 <span class="cert-badge"><i class="fa-solid fa-child"></i> Pediatric</span>
+            </div>
+
+            <!-- Mission History -->
+            <h3 style="font-size: 1rem; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-top: 2rem;">
+                MISSION HISTORY</h3>
+            <div id="mission-history-container" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; max-height: 200px; overflow-y: auto;">
+                <!-- History items populated via JS -->
             </div>
         </div>
 
@@ -162,6 +169,16 @@
         <button onclick="closeAlert()"
             style="background: none; border: none; color: #64748b; margin-top: 1rem; cursor: pointer; font-size: 1rem; width:100%;">Ignore
             (I'm busy)</button>
+    </div>
+</div>
+
+<!-- History Detail Modal -->
+<div id="history-detail-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(10px);">
+    <div class="glass-panel" style="width: 500px; padding: 2rem; text-align: left; border-radius: 24px; border: 1px solid rgba(255,255,255,0.2);">
+        <h2 id="hist-modal-title" style="color: white; margin-bottom: 1rem;">MISSION DETAILS</h2>
+        <div id="hist-modal-content" style="color: #cbd5e1; font-size: 1.1rem; line-height: 1.5;">
+        </div>
+        <button onclick="closeHistoryDetail()" style="margin-top: 2rem; width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 8px; cursor: pointer;">Close</button>
     </div>
 </div>
 
@@ -350,6 +367,53 @@
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
+    async function loadHistory() {
+        try {
+            const res = await axios.get('/api/volunteer/history');
+            const container = document.getElementById('mission-history-container');
+            if (!container) return;
+            
+            if (!res.data.history || res.data.history.length === 0) {
+                container.innerHTML = '<div style="color: #64748b; font-size: 0.9rem; font-style: italic;">No missions yet.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            window.volunteerHistory = res.data.history;
+            res.data.history.forEach((m, index) => {
+                let type = 'EMERGENCY';
+                if (m.details) {
+                    try {
+                        const details = JSON.parse(m.details);
+                        type = details.type || 'EMERGENCY';
+                    } catch(e) {}
+                }
+                const color = m.status === 'Completed' ? '#22c55e' : '#ef4444';
+                const icon = m.status === 'Completed' ? 'fa-check' : 'fa-xmark';
+                
+                const d = new Date(m.timestamp * 1000);
+                const timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                container.innerHTML += `
+                    <div onclick="showHistoryDetail(${index})" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border-left: 3px solid ${color}; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                        <div>
+                            <div style="font-weight: bold; color: white; font-size: 0.9rem;">${type}</div>
+                            <div style="color: #94a3b8; font-size: 0.8rem;">ID: ${m.patient_id}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: ${color}; font-size: 0.8rem; font-weight: bold;"><i class="fa-solid ${icon}"></i> ${m.status}</div>
+                            <div style="color: #64748b; font-size: 0.8rem;">${timeStr}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch(e) { console.error("Load history error", e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadHistory();
+    });
+
     let onDuty = false;
     let pollInterval = null;
     let currentAlert = null;
@@ -444,8 +508,22 @@
                     showAlert(alert, alertId);
                 }
             } catch (e) { console.log("Polling...", e); }
-        }, 4000);
+        }, 15000); // reduced polling frequency
     }
+
+    const socket = io();
+    socket.on('new_emergency', async function(data) {
+        if (!onDuty || missionActive) return;
+        try {
+            const res = await axios.get('/api/volunteer/check_alerts');
+            const alert = res.data.alert;
+            if (alert) {
+                const alertId = alert.id || alert.sos_id || (alert.lat + ',' + alert.lng);
+                if (alertId === acknowledgedAlertId) return;
+                showAlert(alert, alertId);
+            }
+        } catch (e) { console.log("WS trigger error", e); }
+    });
 
     function stopPolling() {
         if (pollInterval) clearInterval(pollInterval);
@@ -563,19 +641,42 @@
     }
 
     async function acceptMission() {
-        // This is the in-card "I'M RESPONDING" button (shown after confirmResponse)
         const btn = document.querySelector('#mission-card button:first-of-type');
         if (btn) {
-            btn.innerHTML = '<i class="fa-solid fa-person-running"></i> EN ROUTE';
-            btn.style.background = '#f59e0b';
-            btn.onclick = null;
+            btn.innerHTML = '<i class="fa-solid fa-check-double"></i> MISSION ACCOMPLISHED';
+            btn.style.background = '#22c55e';
+            btn.style.borderColor = '#22c55e';
+            btn.onclick = completeMission;
         }
+    }
+
+    async function completeMission() {
+        if (!currentAlert) return;
+        try {
+            await axios.post('/api/volunteer/complete', {
+                patient_id: currentAlert.id || currentAlert.sos_id,
+                details: JSON.stringify(currentAlert)
+            });
+        } catch(e) { console.error("Complete API error", e); }
+        resetMissionUI();
+        loadHistory();
     }
 
     async function declineMission() {
         if (!confirm("Decline this mission request?")) return;
+        if (currentAlert) {
+            try {
+                await axios.post('/api/volunteer/reject', {
+                    patient_id: currentAlert.id || currentAlert.sos_id,
+                    details: JSON.stringify(currentAlert)
+                });
+            } catch(e) { console.error("Reject API error", e); }
+        }
+        resetMissionUI();
+        loadHistory();
+    }
 
-        // Reset all state
+    async function resetMissionUI() {
         missionActive = false;
         alertSoundPlayed = false;
         acknowledgedAlertId = null;
@@ -584,6 +685,14 @@
         document.getElementById('mission-card').style.display = 'none';
         document.getElementById('status-text').innerText = 'ON DUTY (SCANNING)';
         document.getElementById('status-text').style.color = 'var(--risk-low)';
+        
+        const btn = document.querySelector('#mission-card button:first-of-type');
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> I\'M RESPONDING';
+            btn.style.background = 'var(--risk-low)';
+            btn.style.borderColor = 'var(--risk-low)';
+            btn.onclick = acceptMission;
+        }
 
         // Reset map to general area
         const iframe = document.querySelector('iframe');
@@ -595,6 +704,56 @@
 
         // Resume scanning for new alerts
         pollForAlerts();
+    }
+
+    function showHistoryDetail(index) {
+        if (!window.volunteerHistory) return;
+        const m = window.volunteerHistory[index];
+        if (!m) return;
+        let type = 'EMERGENCY';
+        let patientInfo = 'Unknown';
+        let symptoms = 'Not provided';
+        if (m.details) {
+            try {
+                const details = JSON.parse(m.details);
+                type = details.type || type;
+                if (details.details) {
+                    symptoms = details.details;
+                    const match = details.details.match(/\((\d+)y ([A-Z])\)/);
+                    if (match) {
+                        patientInfo = `${match[1]} yrs, Gender: ${match[2]}`;
+                        symptoms = details.details.replace(match[0], '').trim();
+                    }
+                }
+            } catch(e) {}
+        }
+        
+        const d = new Date(m.timestamp * 1000);
+        const timeStr = d.toLocaleString();
+
+        document.getElementById('hist-modal-title').innerText = type;
+        document.getElementById('hist-modal-content').innerHTML = `
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;"><i class="fa-regular fa-clock"></i> Time:</strong> ${timeStr}
+            </div>
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;"><i class="fa-solid fa-hashtag"></i> Patient ID:</strong> ${m.patient_id}
+            </div>
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;"><i class="fa-solid fa-user"></i> Patient Info:</strong> ${patientInfo}
+            </div>
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;"><i class="fa-solid fa-notes-medical"></i> Symptoms:</strong> ${symptoms}
+            </div>
+            <div style="margin-bottom:1rem;">
+                <strong style="color:white;"><i class="fa-solid fa-info-circle"></i> Status:</strong> <span style="color:${m.status === 'Completed' ? '#4ade80' : '#ef4444'}; font-weight:bold;">${m.status}</span>
+            </div>
+        `;
+        document.getElementById('history-detail-modal').style.display = 'flex';
+    }
+
+    function closeHistoryDetail() {
+        document.getElementById('history-detail-modal').style.display = 'none';
     }
 </script>
 {% endblock %}

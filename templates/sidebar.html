@@ -1,0 +1,18 @@
+<div class="global-sidebar">
+    <a href="/" class="sidebar-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+    
+    <a href="/dashboard" class="sidebar-link {% if request.path == '/dashboard' %}active{% endif %}"><i class="fa-solid fa-desktop"></i> <span>ER Dashboard</span></a>
+    <a href="/patient" class="sidebar-link {% if request.path == '/patient' %}active{% endif %}"><i class="fa-solid fa-user-injured"></i> <span>Patient Portal</span></a>
+    <a href="/ambulance" class="sidebar-link {% if request.path == '/ambulance' %}active{% endif %}"><i class="fa-solid fa-ambulance"></i> <span>Ambulance Portal</span></a>
+    <a href="/volunteer" class="sidebar-link {% if request.path == '/volunteer' %}active{% endif %}"><i class="fa-solid fa-hands-helping"></i> <span>Volunteer Portal</span></a>
+    <a href="{{ url_for('admin_view') }}" class="sidebar-link {% if request.path == '/admin' %}active{% endif %}">
+        <i class="fa-solid fa-user-shield"></i> <span>Global Command</span>
+    </a>
+    <a href="{{ url_for('drone_tracking') }}" class="sidebar-link {% if request.path == '/drone_tracking' %}active{% endif %}">
+        <i class="fa-solid fa-helicopter"></i> <span>Drone Command</span>
+    </a>
+    <a href="/mesh" class="sidebar-link {% if request.path == '/mesh' %}active{% endif %}"><i class="fa-solid fa-network-wired"></i> <span>Mesh Network</span></a>
+    <a href="{{ url_for('settings') }}" class="sidebar-link {% if request.path == '/settings' %}active{% endif %}">
+        <i class="fa-solid fa-gear"></i> <span>Settings</span>
+    </a>
+</div>

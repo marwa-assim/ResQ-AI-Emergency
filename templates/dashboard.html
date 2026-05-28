@@ -1,4 +1,4 @@
-﻿{% extends "layout.html" %}
+{% extends "layout.html" %}
 
 {% block content %}
 <div class="container" style="max-width: 1400px; position:relative; z-index:1;">
@@ -183,7 +183,7 @@
                 CALCULATING TREND...</div>
         </div>
 
-        <div style="height: 300px;">
+        <div style="height: 300px; position: relative; width: 100%;">
             <canvas id="triageChart"></canvas>
         </div>
     </div>
@@ -193,7 +193,7 @@
 <div id="copilot-modal"
     style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100;">
     <div class="panel"
-        style="width: 600px; margin: 5vh auto; border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px var(--accent-glow);">
+        style="width: 600px; margin: 5vh auto; border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px var(--accent-glow); background-color: rgba(15, 23, 42, 0.98); padding: 2rem; border-radius: 12px;">
         <header
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 1rem;">
             <h2 class="title-glow"><i class="fa-solid fa-brain"></i> AI Clinical Copilot</h2>
@@ -216,7 +216,12 @@
 
 <!-- Command Panel (Hidden by default) -->
 <div id="cmd-panel"
-    style="display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(15, 23, 42, 0.98); border-top: 1px solid var(--accent-cyan); padding: 1.5rem; flex-direction: column; justify-content: center; align-items: center; z-index: 9000; box-shadow: 0 -5px 20px black;">
+    style="display: none; position: fixed; top: 100px; left: 50%; transform: translateX(-50%); width: 600px; background: rgba(15, 23, 42, 0.98); border: 1px solid var(--accent-cyan); border-radius: 12px; padding: 2.5rem 2rem 2rem 2rem; flex-direction: column; justify-content: center; align-items: stretch; z-index: 9999; box-shadow: 0 0 30px rgba(6, 182, 212, 0.5); backdrop-filter: blur(15px);">
+    
+    <div id="cmd-panel-header" style="cursor: grab; position: absolute; top: 0; left: 0; right: 0; height: 35px; border-radius: 12px 12px 0 0; background: rgba(6, 182, 212, 0.1); border-bottom: 1px solid rgba(6, 182, 212, 0.3); display: flex; align-items: center; justify-content: space-between; padding: 0 15px;">
+        <span style="color: #94a3b8; font-size: 0.8rem; font-weight: bold; pointer-events: none;"><i class="fa-solid fa-grip-lines"></i> DRAG TO MOVE</span>
+        <button onclick="toggleCmd()" style="background: none; border: none; color: #ff5f56; cursor: pointer; font-size: 1.2rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"><i class="fa-solid fa-circle-xmark"></i></button>
+    </div>
 
     <!-- Macro Deck -->
     <div id="macro-deck" style="display: flex; gap: 2rem; margin-bottom: 1.5rem; opacity: 1; transition: opacity 0.2s;">
@@ -243,7 +248,7 @@
 
     <!-- Input Row -->
     <div
-        style="width: 800px; max-width: 90%; display: flex; gap: 1rem; align-items: center; background: rgba(0,0,0,0.3); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #334155;">
+        style="width: 100%; display: flex; gap: 1rem; align-items: center; background: rgba(0,0,0,0.3); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #334155; box-sizing: border-box;">
         <i class="fa-solid fa-terminal" style="font-size: 1.2rem; color: var(--accent-cyan);"></i>
         <input type="text" id="cmd-input" placeholder="Type or Speak command..."
             style="flex: 1; background: transparent; border: none; color: white; font-family: monospace; font-size: 1.3rem; outline: none;">
@@ -253,10 +258,10 @@
             <i class="fa-solid fa-microphone"></i>
         </button>
 
-        <div
-            style="font-family: monospace; color: #64748b; font-size: 0.8rem; border: 1px solid #475569; padding: 2px 6px; border-radius: 4px;">
+        <button onclick="executeCmd()"
+            style="background: var(--accent-cyan); color: #0f172a; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; transition: opacity 0.2s;">
             ENTER
-        </div>
+        </button>
     </div>
 </div>
 
@@ -285,6 +290,12 @@
 
     .action-key {
         border-bottom: 2px solid var(--accent-cyan);
+    }
+
+    .bed-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
     }
 
     .bed-key {
@@ -354,7 +365,10 @@
     }
 </style>
 
+<!-- Chart.js for Analytics -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Socket.IO for Real-Time Updates -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 
 <script>
     // -------------------------------------------------------------------------
@@ -405,6 +419,23 @@
     let lastQueueCount = 0;
 
     // -------------------------------------------------------------------------
+    // 2.5. WebSockets Real-Time Sync (Safe Init)
+    // -------------------------------------------------------------------------
+    let socket = null;
+    try {
+        if (typeof io !== 'undefined') {
+            socket = io();
+            socket.on('new_emergency', function(data) {
+                const audio = document.getElementById('alarm-sound');
+                if (audio) { audio.volume = 0.8; audio.play().catch(() => {}); }
+                refreshAll();
+            });
+        }
+    } catch(e) {
+        console.warn("Socket.IO not available, relying on fallback polling.", e);
+    }
+
+    // -------------------------------------------------------------------------
     // 3. Main Polling & Rendering
     // -------------------------------------------------------------------------
     async function refreshAll() {
@@ -420,6 +451,10 @@
 
             renderQueue();
             renderBeds();
+            updateStats();
+            if (document.getElementById('copilot-modal').style.display === 'block' && window.currentCopilotPid) {
+                openCopilot(window.currentCopilotPid, window.currentCopilotIsBed, true);
+            }
 
         } catch (e) {
             console.error("Refresh Failed", e);
@@ -673,7 +708,39 @@
         }
     }
 
+    // Voice Recognition for "Hi ResQ"
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        
+        recognition.onresult = function(event) {
+            const last = event.results.length - 1;
+            const text = event.results[last][0].transcript.trim().toLowerCase();
+            if (text.includes('hi rescue') || text.includes('hi resq') || text.includes('high rescue') || text.includes('hey rescue')) {
+                if (cmdPanel.style.display !== 'flex') {
+                    toggleCmd();
+                    showToast('🎙️ Command Center Activated');
+                }
+            }
+        };
+        recognition.onend = function() {
+            recognition.start(); // Keep listening
+        };
+        try { recognition.start(); } catch(e) {}
+    }
+
     // Auto-init listener if element exists
+    async function executeCmd() {
+        if (!cmdInput) return;
+        const raw = cmdInput.value.trim();
+        if (!raw) return;
+        await processCommand(raw);
+        cmdInput.value = '';
+    }
+
     if (cmdInput) {
         cmdInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
@@ -704,8 +771,9 @@
 
                 const bed = bedData.find(b => b.id === bedId);
                 if (bed && bed.patient) {
-                    await axios.post('/api/notes', { patient_id: bed.patient.id, note: text });
+                    await axios.post('/api/notes', { patient_id: bed.patient.id, note: text, bed_id: bed.id });
                     showToast(`✅ Note added to Bed ${bedId}`);
+                    await refreshAll();
                 } else {
                     showToast(`❌ Bed ${bedId} Empty`);
                 }
@@ -731,8 +799,18 @@
                 } else {
                     showToast("❌ No patients available");
                 }
+            } else if (cmd === 's' || cmd === 'staff') {
+                const bedId = parseInt(parts[1]);
+                const staffName = parts.slice(2).join(' ');
+                if (bedId && staffName) {
+                    await axios.post('/api/staff/assign', { bed_id: bedId, staff: staffName });
+                    showToast(`✅ Staff ${staffName} assigned to Bed ${bedId}`);
+                    refreshAll();
+                } else {
+                    showToast("❌ Usage: s <bed_id> <staff_name>");
+                }
             } else if (cmd === 'help') {
-                alert("Commands:\nd <id> - Discharge\nn <id> <text> - Add Note\na <id> - Assign Next Patient");
+                alert("Commands:\nd <id> - Discharge\nn <id> <text> - Add Note\na <id> - Assign Next Patient\ns <id> <name> - Assign Staff");
             } else {
                 showToast("❓ Unknown Command");
             }
@@ -929,6 +1007,7 @@
                     let typeLabel = a.display_type === 'AMB' ? 'EMS' : 'SELF';
                     let dest = a.destination ? `<span style="background:#22c55e33; padding:2px 5px; border-radius:4px; color:#4ade80; font-size:0.9rem; margin-left:10px;"><i class="fa-solid fa-location-dot"></i> ${a.destination.toUpperCase()}</span>` : '';
 
+                    let vitalsStr = (a.hr && a.hr !== '--') ? `<span style="color:#cbd5e1; font-size:0.85rem;">[HR: ${a.hr} | SpO2: ${a.spo2}]</span>` : '';
                     return `
                     <span style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 0 3rem;">
                         ${icon} <b style="color: white; font-size: 1.1rem;">${typeLabel} ${a.id}</b> 
@@ -938,6 +1017,7 @@
                         </span>
                         <span style="color: #ff9999; font-weight: bold;">${a.condition}</span>
                         <span style="font-style: italic; opacity: 0.7; font-size: 0.9rem;">(${a.symptoms})</span>
+                        ${vitalsStr}
                     </span>
                 `}).join('<span style="color: #333;"> | </span>');
             } else {
@@ -1027,11 +1107,18 @@
     }
 
     // AI Copilot
-    function openCopilot(pid, isBed = false) {
+    window.currentCopilotPid = null;
+    window.currentCopilotIsBed = false;
+
+    function openCopilot(pid, isBed = false, silentRefresh = false) {
+        window.currentCopilotPid = pid;
+        window.currentCopilotIsBed = isBed;
         const modal = document.getElementById('copilot-modal');
         const content = document.getElementById('copilot-content');
         modal.style.display = 'block';
-        content.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fa-solid fa-brain fa-pulse fa-3x" style="color: var(--accent-cyan);"></i><p>Analyzing...</p></div>';
+        if (!silentRefresh) {
+            content.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fa-solid fa-brain fa-pulse fa-3x" style="color: var(--accent-cyan);"></i><p>Analyzing...</p></div>';
+        }
 
         setTimeout(async () => {
             let p;
@@ -1085,6 +1172,7 @@
                         <div style="font-size: 1.5rem; font-weight: bold; color: white;">${p.name} <span style="font-size:1rem; color:#64748b;">(${p.age}y)</span></div>
                         <ul style="margin-top: 1rem; color: #cbd5e1; list-style: none; padding: 0;">
                             <li style="margin-bottom: 0.5rem;"><i class="fa-solid fa-triangle-exclamation" style="width: 20px;"></i> Risk Score: <strong style="color:${color}">${p.score}%</strong></li>
+                            <li style="margin-bottom: 0.5rem;"><i class="fa-solid fa-user-doctor" style="width: 20px;"></i> Assigned Staff: <strong style="color: #e2e8f0;">${(isBed && bedData.find(b => b.patient && b.patient.id == pid)) ? (bedData.find(b => b.patient && b.patient.id == pid).staff.join(', ') || 'Unassigned') : 'Waiting Area'}</strong></li>
                             <li><i class="fa-solid fa-notes-medical" style="width: 20px;"></i> Symptom: ${typeof p.symptoms === 'object'
                     ? Object.keys(p.symptoms).filter(k => p.symptoms[k]).join(', ')
                     : p.symptoms
@@ -1098,6 +1186,12 @@
                         </h4>
                         <div id="notes-list" style="max-height: 200px; overflow-y: auto;">
                             ${notesHtml || '<div style="color: #64748b; font-style: italic; padding: 1rem;">No notes recorded. use "n [bed] [text]" to add.</div>'}
+                        </div>
+                        <h4 style="margin-top: 1.5rem; color: var(--accent-cyan); border-bottom: 1px solid #334155; padding-bottom: 0.5rem;">
+                            <i class="fa-solid fa-folder-open"></i> Hospital Records & History
+                        </h4>
+                        <div style="max-height: 200px; overflow-y: auto; font-size: 0.85rem; color: #cbd5e1; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 4px; border: 1px solid #334155;">
+                            ${(p.medical_history || 'No prior hospital records.').split('|').map(h => `<div style="margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;">• ${h.trim()}</div>`).join('')}
                         </div>
                     </div>
                     <div>
@@ -1242,9 +1336,14 @@
         loop() {
             if (!this.isRunning) return;
 
-            this.update();
-            this.draw();
-
+            try {
+                this.update();
+                this.draw();
+            } catch (e) {
+                console.error("Simulation crashed", e);
+                this.ctx.fillStyle = "red";
+                this.ctx.fillText("SYSTEM OFFLINE: " + e.message, 50, 50);
+            }
             requestAnimationFrame(() => this.loop());
         }
 
@@ -1773,5 +1872,90 @@
         }
         animate();
     }
+
+    // --- DRAG LOGIC FOR CMD-PANEL ---
+    // cmdPanel already declared at top level
+    const cmdHeader = document.getElementById('cmd-panel-header');
+    let isDragging = false, dragStartX, dragStartY, initialLeft, initialTop;
+
+    cmdHeader.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        
+        const rect = cmdPanel.getBoundingClientRect();
+        if (cmdPanel.style.transform.includes('translateX')) {
+            cmdPanel.style.transform = 'none';
+            cmdPanel.style.left = rect.left + 'px';
+            cmdPanel.style.top = rect.top + 'px';
+        }
+        
+        initialLeft = cmdPanel.offsetLeft;
+        initialTop = cmdPanel.offsetTop;
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        cmdPanel.style.left = (initialLeft + dx) + 'px';
+        cmdPanel.style.top = (initialTop + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        document.body.style.userSelect = '';
+    });
+
+    // --- CONTINUOUS WAKE WORD LISTENER ---
+    let wakeRec = null;
+    if ('webkitSpeechRecognition' in window) {
+        wakeRec = new webkitSpeechRecognition();
+        wakeRec.continuous = true;
+        wakeRec.interimResults = true;
+        wakeRec.lang = 'en-US';
+
+        wakeRec.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                transcript += event.results[i][0].transcript;
+            }
+            
+            let txt = transcript.toLowerCase();
+            if (txt.includes('hi rescue') || txt.includes('hi resq') || txt.includes('hi rest you')) {
+                wakeRec.stop();
+                if (cmdPanel.style.display === 'none' || cmdPanel.style.display === '') {
+                    toggleCmd();
+                }
+                setTimeout(() => {
+                    const micBtn = document.getElementById('mic-trigger');
+                    if(micBtn) micBtn.click();
+                }, 500);
+            }
+        };
+
+        wakeRec.onend = () => {
+            if (cmdPanel.style.display === 'none') {
+                try { wakeRec.start(); } catch(e) {}
+            }
+        };
+        
+        // Try starting it automatically
+        try { wakeRec.start(); } catch(e) { console.log('Wake start blocked, needs interaction'); }
+    }
+
+    // Hook into toggleCmd to manage wakeRec state via MutationObserver
+    const panelObserver = new MutationObserver(() => {
+        if(wakeRec) {
+            if (cmdPanel.style.display !== 'none') {
+                wakeRec.stop();
+            } else {
+                try { wakeRec.start(); } catch(e) {}
+            }
+        }
+    });
+    panelObserver.observe(cmdPanel, { attributes: true, attributeFilter: ['style'] });
+
 </script>
 {% endblock %}

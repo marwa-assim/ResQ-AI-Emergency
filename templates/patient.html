@@ -6,7 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Mobile First -->
   <title>ResQ Connect | Patient Portal</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Toastify CSS/JS -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <style>
     :root {
@@ -20,9 +24,10 @@
     }
 
     body {
+      font-family: 'Poppins', sans-serif;
       background: radial-gradient(circle at top, #1e293b, #0f172a);
+      background-attachment: fixed;
       color: var(--text-primary);
-      font-family: 'Outfit', sans-serif;
       margin: 0;
       padding: 0;
       min-height: 100vh;
@@ -399,7 +404,7 @@
       background: rgba(15,23,42,0.9); backdrop-filter: blur(14px);
       border: 1px solid rgba(6,182,212,0.35); border-radius: 30px;
       padding: 5px 14px; display: flex; align-items: center; gap: 8px;
-      font-family: 'Outfit', sans-serif; font-size: 0.8rem; color: #94a3b8;
+      font-family: 'Poppins', sans-serif; font-size: 0.8rem; color: #94a3b8;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     #translate-bar i { color: #06b6d4; font-size: 0.95rem; }
@@ -410,10 +415,31 @@
     .goog-te-gadget-simple img { display: none !important; }
     .goog-te-banner-frame { display: none !important; }
     body { top: 0 !important; }
+
+    /* Global Sidebar styles */
+    .global-sidebar {
+        position: fixed; top: 0; left: 0; height: 100vh; width: 60px;
+        background: rgba(15,23,42,0.85); backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(6,182,212,0.2);
+        display: flex; flex-direction: column; align-items: center; padding-top: 20px;
+        z-index: 9000; transition: width 0.3s ease; overflow: hidden;
+    }
+    .global-sidebar:hover { width: 220px; align-items: flex-start; }
+    .sidebar-link {
+        color: #94a3b8; text-decoration: none; padding: 15px; width: 100%; box-sizing: border-box;
+        display: flex; align-items: center; gap: 15px; font-family: 'Poppins', sans-serif;
+        transition: all 0.2s; white-space: nowrap; border-left: 3px solid transparent;
+    }
+    .sidebar-link i { font-size: 1.2rem; min-width: 30px; text-align: center; }
+    .sidebar-link:hover { color: #06b6d4; background: rgba(6,182,212,0.1); border-left-color: #06b6d4; }
+    .app-wrapper { margin-left: 60px; transition: margin-left 0.3s ease; width: calc(100% - 60px); min-height: 100vh; }
   </style>
 </head>
 
 <body>
+    <!-- Global Sidebar -->
+    {% include 'sidebar.html' %}
+    <div class="app-wrapper">
   <!-- Language Switcher -->
   <div id="translate-bar">
     <i class="fa-solid fa-language"></i>
@@ -440,6 +466,10 @@
     <button id="btn-mic-mode" onclick="voice.toggleMic()" class="floating-btn" aria-label="Toggle Voice Command">
       <i class="fa-solid fa-microphone"></i>
     </button>
+    <button id="btn-stop-voice" onclick="if(voice){ voice.stop(); }" class="floating-btn" aria-label="Stop AI Voice" 
+      style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444;" title="Stop AI / Stop Protocol">
+      <i class="fa-solid fa-hand"></i>
+    </button>
     <button id="btn-sign-mode" onclick="window.location.href='/sign_language'" class="floating-btn" aria-label="Sign Language Mode"
       title="Sign Language - talk to AI with your hands"
       style="background:rgba(56,189,248,0.12); border-color:#38bdf8; font-size:1.3rem;">
@@ -460,7 +490,7 @@
     z-index: 5000;
     transition: right 0.4s cubic-bezier(0.4,0,0.2,1);
     display: flex; flex-direction: column;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Poppins', sans-serif;
   ">
     <!-- Header -->
     <div style="padding: 1rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.07);
@@ -541,6 +571,179 @@
     .sl-gesture-card .emoji { font-size: 1.2rem; }
     .sl-gesture-card .label { font-weight: 700; color: #e2e8f0; display:block; }
     .sl-gesture-card .hint { color: #64748b; font-size:0.65rem; display:block; line-height:1.3; }
+    /* Modern Emergency Cards */
+    .emergency-card {
+      position: relative;
+      height: 110px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+    .emergency-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 50% 50%, var(--card-glow, rgba(255,255,255,0.05)) 0%, transparent 70%);
+      opacity: 0.15;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .emergency-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--card-color);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 15px var(--card-glow);
+      background: rgba(30, 41, 59, 0.55);
+    }
+    .emergency-card:hover::before {
+      opacity: 0.45;
+      transform: scale(1.2);
+    }
+    .emergency-card .card-icon {
+      position: relative;
+      z-index: 2;
+      font-size: 2.2rem;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 8px var(--card-glow));
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .emergency-card:hover .card-icon {
+      transform: scale(1.15) rotate(5deg);
+    }
+    .emergency-card .card-label {
+      position: relative;
+      z-index: 2;
+      color: #e2e8f0;
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: 0.75px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+      transition: color 0.3s ease;
+    }
+    .emergency-card:hover .card-label {
+      color: #ffffff;
+    }
+
+    /* Flipbook CSS */
+    .flipbook-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .flipbook-frame {
+      transition: opacity 0.15s ease-in-out;
+    }
+    
+    @keyframes flipbook-pulse-a {
+      0%, 45% { opacity: 1; }
+      50%, 95% { opacity: 0; }
+    }
+    @keyframes flipbook-pulse-b {
+      0%, 45% { opacity: 0; }
+      50%, 95% { opacity: 1; }
+    }
+
+    /* Fast Flip (CPR at 110 bpm -> 0.54s cycle) */
+    .anim-cpr-compress .frame-a {
+      animation: flipbook-pulse-a 0.54s infinite steps(1);
+    }
+    .anim-cpr-compress .frame-b {
+      animation: flipbook-pulse-b 0.54s infinite steps(1);
+    }
+
+    /* Standard flipbook animations */
+    .anim-cpr-check .frame-a {
+      animation: flipbook-pulse-a 1.6s infinite steps(1);
+    }
+    .anim-cpr-check .frame-b {
+      animation: flipbook-pulse-b 1.6s infinite steps(1);
+    }
+    
+    .anim-rescue-breath .frame-a {
+      animation: flipbook-pulse-a 2.0s infinite steps(1);
+    }
+    .anim-rescue-breath .frame-b {
+      animation: flipbook-pulse-b 2.0s infinite steps(1);
+    }
+
+    .anim-pressure .frame-a {
+      animation: flipbook-pulse-a 1.4s infinite steps(1);
+    }
+    .anim-pressure .frame-b {
+      animation: flipbook-pulse-b 1.4s infinite steps(1);
+    }
+
+    .anim-choking-blows .frame-a {
+      animation: flipbook-pulse-a 1.2s infinite steps(1);
+    }
+    .anim-choking-blows .frame-b {
+      animation: flipbook-pulse-b 1.2s infinite steps(1);
+    }
+
+    .anim-choking-thrusts .frame-a {
+      animation: flipbook-pulse-a 1.2s infinite steps(1);
+    }
+    .anim-choking-thrusts .frame-b {
+      animation: flipbook-pulse-b 1.2s infinite steps(1);
+    }
+
+    .anim-water .frame-a {
+      animation: flipbook-pulse-a 1.8s infinite steps(1);
+    }
+    .anim-water .frame-b {
+      animation: flipbook-pulse-b 1.8s infinite steps(1);
+    }
+
+    .anim-cover .frame-a {
+      animation: flipbook-pulse-a 1.8s infinite steps(1);
+    }
+    .anim-cover .frame-b {
+      animation: flipbook-pulse-b 1.8s infinite steps(1);
+    }
+
+    .anim-stroke-face .frame-a {
+      animation: flipbook-pulse-a 2.0s infinite steps(1);
+    }
+    .anim-stroke-face .frame-b {
+      animation: flipbook-pulse-b 2.0s infinite steps(1);
+    }
+
+    .anim-stroke-arms .frame-a {
+      animation: flipbook-pulse-a 2.0s infinite steps(1);
+    }
+    .anim-stroke-arms .frame-b {
+      animation: flipbook-pulse-b 2.0s infinite steps(1);
+    }
+
+    .anim-epipen .frame-a {
+      animation: flipbook-pulse-a 1.5s infinite steps(1);
+    }
+    .anim-epipen .frame-b {
+      animation: flipbook-pulse-b 1.5s infinite steps(1);
+    }
+
+    /* Pulsing SVGs */
+    @keyframes warning-pulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.95)); }
+    }
+    .animate-warning-pulse {
+      animation: warning-pulse 1.8s infinite ease-in-out;
+    }
   </style>
 
   <div class="container" id="main-dashboard">
@@ -587,15 +790,36 @@
         </div>
       </div>
 
-      <!-- EMERGENCY QUICK-CHIPS -->
-      <div id="emergency-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0.85rem;">
-        <button onclick="searchFirstAid('bleeding')"       style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(239,68,68,.5);background:rgba(239,68,68,.12);color:#fca5a5;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(239,68,68,.28)'" onmouseout="this.style.background='rgba(239,68,68,.12)'">🩸 Bleeding</button>
-        <button onclick="searchFirstAid('cpr')"            style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(6,182,212,.5);background:rgba(6,182,212,.12);color:#67e8f9;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(6,182,212,.28)'" onmouseout="this.style.background='rgba(6,182,212,.12)'">🫀 CPR</button>
-        <button onclick="searchFirstAid('choking')"        style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.12);color:#fde68a;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.28)'" onmouseout="this.style.background='rgba(251,191,36,.12)'">😮 Choking</button>
-        <button onclick="searchFirstAid('burn')"           style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(249,115,22,.5);background:rgba(249,115,22,.12);color:#fdba74;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(249,115,22,.28)'" onmouseout="this.style.background='rgba(249,115,22,.12)'">🔥 Burns</button>
-        <button onclick="searchFirstAid('stroke')"         style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(168,85,247,.5);background:rgba(168,85,247,.12);color:#d8b4fe;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(168,85,247,.28)'" onmouseout="this.style.background='rgba(168,85,247,.12)'">🧠 Stroke</button>
-        <button onclick="searchFirstAid('seizure')"        style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(234,179,8,.5);background:rgba(234,179,8,.12);color:#fef08a;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(234,179,8,.28)'" onmouseout="this.style.background='rgba(234,179,8,.12)'">⚡ Seizure</button>
-        <button onclick="searchFirstAid('allergic reaction')" style="display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1px solid rgba(34,197,94,.5);background:rgba(34,197,94,.12);color:#86efac;font-size:0.8rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(34,197,94,.28)'" onmouseout="this.style.background='rgba(34,197,94,.12)'">⚠️ Allergy</button>
+      <!-- EMERGENCY QUICK-CHIPS (MODERN CARDS) -->
+      <div id="emergency-chips" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 1.5rem;">
+        <div onclick="searchFirstAid('cpr')" class="emergency-card" style="--card-color: #06b6d4; --card-glow: rgba(6,182,212,0.45); border-color: rgba(6,182,212,0.2);">
+            <div class="card-icon"><i class="fa-solid fa-heart-pulse" style="color: #06b6d4"></i></div>
+            <div class="card-label">CPR</div>
+        </div>
+        <div onclick="searchFirstAid('bleeding')" class="emergency-card" style="--card-color: #ef4444; --card-glow: rgba(239,68,68,0.45); border-color: rgba(239,68,68,0.2);">
+            <div class="card-icon"><i class="fa-solid fa-droplet" style="color: #ef4444"></i></div>
+            <div class="card-label">Bleeding</div>
+        </div>
+        <div onclick="searchFirstAid('choking')" class="emergency-card" style="--card-color: #fbbf24; --card-glow: rgba(251,191,36,0.45); border-color: rgba(251,191,36,0.2);">
+            <div class="card-icon"><i class="fa-solid fa-head-side-cough" style="color: #fbbf24"></i></div>
+            <div class="card-label">Choking</div>
+        </div>
+        <div onclick="searchFirstAid('burn')" class="emergency-card" style="--card-color: #f97316; --card-glow: rgba(249,115,22,0.45); border-color: rgba(249,115,22,0.2);">
+            <div class="card-icon"><i class="fa-solid fa-fire" style="color: #f97316"></i></div>
+            <div class="card-label">Burns</div>
+        </div>
+        <div onclick="searchFirstAid('stroke')" class="emergency-card" style="--card-color: #a855f7; --card-glow: rgba(168,85,247,0.45); border-color: rgba(168,85,247,0.2);">
+            <div class="card-icon"><i class="fa-solid fa-brain" style="color: #a855f7"></i></div>
+            <div class="card-label">Stroke</div>
+        </div>
+        <div onclick="searchFirstAid('seizure')" class="emergency-card" style="--card-color: #eab308; --card-glow: rgba(234,179,8,0.45); border-color: rgba(234,179,8,0.2);">
+            <div class="card-icon"><i class="fa-solid fa-bolt" style="color: #eab308"></i></div>
+            <div class="card-label">Seizure</div>
+        </div>
+        <div onclick="searchFirstAid('allergic reaction')" class="emergency-card" style="--card-color: #22c55e; --card-glow: rgba(34,197,94,0.45); border-color: rgba(34,197,94,0.2);">
+            <div class="card-icon"><i class="fa-solid fa-syringe" style="color: #22c55e"></i></div>
+            <div class="card-label">Allergy</div>
+        </div>
       </div>
 
       <!-- INPUT ROW -->
@@ -813,9 +1037,12 @@
         your location.</p>
 
       <!-- Live Map Tracking View -->
-      <div id="ambulance-live-map" style="width:100%; height:250px; border-radius:16px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); margin-bottom:1.5rem; position:relative; background-color:#222;">
-          <iframe id="live-map-iframe" width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=Bahrain&t=m&z=13&output=embed&iwloc=Near"></iframe>
-          <div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.8); color:white; padding:5px 10px; border-radius:10px; font-size:0.8rem; font-family:'Inter', sans-serif;" id="live-gps-text">
+      <!-- Leaflet CSS/JS embedded directly for the ambulance map -->
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <div id="ambulance-live-map" style="width:100%; height:250px; border-radius:16px; overflow:hidden; border:2px solid rgba(255,255,255,0.2); margin-bottom:1.5rem; position:relative; background-color:#222; z-index:1;">
+          <div id="ambulance-leaflet-map" style="width:100%; height:100%;"></div>
+          <div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.8); color:white; padding:5px 10px; border-radius:10px; font-size:0.8rem; font-family: 'Poppins', sans-serif; z-index:1000;" id="live-gps-text">
               <i class="fa-solid fa-satellite-dish pulse"></i> AWAITING GPS...
           </div>
       </div>
@@ -826,15 +1053,10 @@
         style="margin-top: 1rem; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
         <div style="width: 60%; height: 100%; background: var(--risk-critical); animation: load 2s infinite;"></div>
       </div>
+      <button onclick="cancelAmbulanceRequest()" class="cancel-request-btn btn btn-filled" style="background: #ef4444; color: white; width: 100%; margin-top: 1.5rem; padding: 12px; font-size: 1.1rem; font-weight: bold;"><i class="fa-solid fa-xmark"></i> CANCEL REQUEST</button>
+      </div>
     </div>
 
-    <p style="margin-top: 2rem; color: #94a3b8; font-size: 1.1rem;">Please ensure your door is unlocked.</p>
-
-    <div style="margin-top: 2rem;">
-      <button id="btn-cancel-request" class="btn-dispatch"
-        style="margin: 0 auto; border-color: #64748b; color: #cbd5e1;" onclick="cancelDispatch()">Cancel
-        Request</button>
-    </div>
   </div>
 
   <script>
@@ -880,8 +1102,23 @@
         return;
       }
 
+      let locResolved = false;
+      const locTimeout = setTimeout(() => {
+          if (!locResolved) {
+              locResolved = true;
+              _showLocationFallbackModal("Location request timed out. Please check your browser/OS permissions.");
+              if (btn) {
+                  btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+                  btn.disabled = false;
+              }
+          }
+      }, 8000);
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          if (locResolved) return;
+          locResolved = true;
+          clearTimeout(locTimeout);
           // ✅ Got real GPS — show confirmation before sending
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
@@ -889,13 +1126,19 @@
           _confirmAndDispatch(lat, lng, acc);
         },
         async (error) => {
+          if (locResolved) return;
+          locResolved = true;
+          clearTimeout(locTimeout);
           // ❌ GPS failed — show warning, never silently use fallback
           let reason = "Location access was denied or timed out.";
           if (error.code === 1) reason = "You denied location access. Please allow it in your browser settings.";
           if (error.code === 2) reason = "GPS signal unavailable (try moving near a window).";
           if (error.code === 3) reason = "Location request timed out. Your GPS may be slow indoors.";
           _showLocationFallbackModal(reason);
-          if (btn) btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+          if (btn) {
+              btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+              btn.disabled = false;
+          }
         },
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
       );
@@ -935,8 +1178,6 @@
       document.getElementById('_confirm-loc-no').onclick = () => {
         document.body.removeChild(modal);
         _showLocationFallbackModal("You indicated the location was incorrect. Please retry or share your location manually.");
-        const btn = document.querySelector('.btn-dispatch');
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
       };
     }
 
@@ -968,6 +1209,11 @@
       };
       document.getElementById('_loc-dismiss').onclick = () => {
         document.body.removeChild(modal);
+        const btn = document.querySelector('.btn-dispatch');
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+            btn.disabled = false;
+        }
       };
     }
 
@@ -1079,10 +1325,22 @@
           this.recognition.interimResults = false;
           this.recognition.lang = 'en-US';
 
+          // Interrupt AI Voice instantly when user starts speaking
+          this.recognition.onspeechstart = () => {
+              if (this.synth.speaking) {
+                  this.synth.cancel();
+                  console.log("Interrupted AI Voice");
+              }
+          };
+
           this.recognition.onresult = (event) => {
             const last = event.results.length - 1;
             const command = event.results[last][0].transcript.trim().toLowerCase();
             console.log("Voice Command:", command);
+            
+            // Stop speaking if speech results arrive (backup to onspeechstart)
+            if (this.synth.speaking) this.synth.cancel();
+
             this.processCommand(command);
           };
           this.recognition.onerror = (e) => console.log("Mic Error", e);
@@ -1179,28 +1437,21 @@
         }
       }
 
-      speak(text) {
-        // Placeholder for initial logic, overwritten by method below
-        // This chunk is purely to match the target content for replacement
-        if (this.synth.speaking) this.synth.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        // Set language from Google Translate selection
-        const _cm = document.cookie.match(/googtrans=\/[a-z-]+\/([a-z-]+)/i);
-        const _gl = { 'ar':'ar-SA','fr':'fr-FR','es':'es-ES','ur':'ur-PK','hi':'hi-IN','zh-CN':'zh-CN','de':'de-DE','tr':'tr-TR','ru':'ru-RU','id':'id-ID','ms':'ms-MY','fa':'fa-IR','bn':'bn-BD','pt':'pt-PT','en':'en-US' };
-        utter.lang = _cm ? (_gl[_cm[1]] || _cm[1]) : 'en-US';
-        const _vs = this.synth.getVoices();
-        const _v = _vs.find(v => v.lang === utter.lang) || _vs.find(v => v.lang.startsWith((_cm||['','en'])[1]));
-        if (_v) utter.voice = _v;
-        this.synth.speak(utter);
-      }
 
       processCommand(cmd) {
         // ── Navigation while protocol is active ──
         if (resq && resq.active) {
-          if (cmd.includes("next") || cmd.includes("ok") || cmd.includes("done")) { resq.handleVoice("next"); return; }
-          if (cmd.includes("back") || cmd.includes("previous") || cmd.includes("no")) { resq.handleVoice("back"); return; }
-          if (cmd.includes("repeat") || cmd.includes("again") || cmd.includes("what")) { resq.handleVoice("repeat"); return; }
-          if (cmd.includes("stop") || cmd.includes("end") || cmd.includes("exit")) { resq.stop(); return; }
+          if (cmd.match(/next|ok|done|continue|yes|yep|yeah|ready|go/)) { resq.handleVoice("next"); return; }
+          if (cmd.match(/back|previous|no|wait|hold/)) { resq.handleVoice("back"); return; }
+          if (cmd.match(/repeat|again|what|pardon/)) { resq.handleVoice("repeat"); return; }
+          if (cmd.match(/stop|end|exit|cancel|quit/)) { resq.stop(); return; }
+          
+          // USER INTERRUPTED WITH A CONVERSATIONAL QUESTION!
+          // Stop the protocol and send to real LLM just like ChatGPT.
+          resq.stop();
+          if (this.synth.speaking) this.synth.cancel();
+          if (typeof searchFirstAid === 'function') searchFirstAid(cmd);
+          return;
         }
 
         // ── Ambulance dispatch ──
@@ -1209,7 +1460,7 @@
           return;
         }
 
-        // ── Dictation into AI nurse input ──
+        // ── Dictation or continuous voice chat ──
         if (this.isDictating) {
           const inp = document.getElementById('ai-text-input');
           if (inp) { inp.value = cmd; }
@@ -1219,16 +1470,10 @@
           return;
         }
 
-        // ── Direct keyword triggers ──
+        // ── True Conversational AI (Real LLM fallback) ──
         if (typeof searchFirstAid === 'function') {
-          if (cmd.match(/cpr|cardiac|heart|chest|compres|arrest/)) { searchFirstAid('cpr'); return; }
-          if (cmd.match(/bleed|blood|cut|wound/))                  { searchFirstAid('bleeding'); return; }
-          if (cmd.match(/choke|choking|heimlich|airway/))           { searchFirstAid('choking'); return; }
-          if (cmd.match(/burn|fire|scald/))                         { searchFirstAid('burn'); return; }
-          if (cmd.match(/stroke|face|slur/))                        { searchFirstAid('stroke'); return; }
-          if (cmd.match(/seiz|convuls|epilep/))                     { searchFirstAid('seizure'); return; }
-          if (cmd.match(/allerg|epipen|anaphyl/))                   { searchFirstAid('allergy'); return; }
-          if (cmd.match(/help|rescue|emergency/))                   { searchFirstAid('cpr'); return; }
+           // Instead of just relying on regex, we send ALL speech to the AI nurse
+           searchFirstAid(cmd);
         }
       }
 
@@ -1269,8 +1514,112 @@
         }
       }
 
-      speak(text) {
+      stop() {
+        this.synth.cancel();
+        window.utterances = [];
+        if (typeof resq !== 'undefined' && resq && resq.active) resq.stop();
+        this.speak_visuals(false);
+        if (this.wasListening && !this.isListening) {
+          try { this.recognition.start(); this.isListening = true; this.speak_visuals(true); } catch(e) {}
+        }
+      }
+
+      async translateIfNeeded(text) {
+        if (!text) return "";
+        const cookieMatch = document.cookie.match(/googtrans=\/[a-z-]+\/([a-z-]+)/i);
+        const gtCode = cookieMatch ? cookieMatch[1].toLowerCase() : 'en';
+        if (gtCode === 'en') return text;
+
+        const dict = {
+          'ar': {
+            'listening for commands.': 'جاري الاستماع للأوامر.',
+            'vision impaired mode active. i will read the screen for you.': 'وضع صعوبة الرؤية نشط. سأقرأ الشاشة لك.',
+            'voice guidance deactivated.': 'تم إلغاء تنشيط التوجيه الصوتي.',
+            'dispatch error. system offline.': 'خطأ في الإرسال. النظام غير متصل.',
+            'protocol ended. stay safe.': 'انتهى البروتوكول. ابق آمناً.',
+            'starting cpr. follow the steps shown.': 'بدء بروتوكول الإنعاش القلبي الرئوي. اتبع الخطوات المعروضة.',
+            'starting cpr protocol. follow the steps shown.': 'بدء بروتوكول الإنعاش القلبي الرئوي. اتبع الخطوات المعروضة.',
+            'starting bleeding control. follow the steps shown.': 'بدء بروتوكول التحكم في النزيف. اتبع الخطوات المعروضة.',
+            'starting choking - heimlich. follow the steps shown.': 'بدء بروتوكول الاختناق. اتبع الخطوات المعروضة.',
+            'starting burn treatment. follow the steps shown.': 'بدء بروتوكول علاج الحروق. اتبع الخطوات المعروضة.',
+            'starting stroke - fast protocol. follow the steps shown.': 'بدء بروتوكول السكتة الدماغية. اتبع الخطوات المعروضة.',
+            'starting seizure response. follow the steps shown.': 'بدء بروتوكول النوبات. اتبع الخطوات المعروضة.',
+            'starting allergic reaction. follow the steps shown.': 'بدء بروتوكول رد الفعل التحسسي. اتبع الخطوات المعروضة.',
+            'repeating:': 'إعادة:',
+            'checking protocol.': 'جاري التحقق من البروتوكول.',
+            'sign language recognized. opening ': 'تم التعرف على لغة الإشارة. جاري فتح بروتوكول ',
+            'sign detected:': 'تم اكتشاف الإشارة:'
+          },
+          'fr': {
+            'listening for commands.': 'À l\'écoute des commandes.',
+            'vision impaired mode active. i will read the screen for you.': 'Mode déficient visuel actif. Je vais lire l\'écran pour vous.',
+            'voice guidance deactivated.': 'Guidage vocal désactivé.',
+            'dispatch error. system offline.': 'Erreur de répartition. Système hors ligne.',
+            'protocol ended. stay safe.': 'Protocole terminé. Restez en sécurité.',
+            'starting cpr. follow the steps shown.': 'Démarrage de la réanimation. Suivez les étapes.',
+            'starting cpr protocol. follow the steps shown.': 'Démarrage du protocole de RCR. Suivez les étapes.',
+            'starting bleeding control. follow the steps shown.': 'Démarrage du contrôle des saignements. Suivez les étapes.',
+            'starting choking - heimlich. follow the steps shown.': 'Démarrage du protocole d\'étouffement. Suivez les étapes.',
+            'starting burn treatment. follow the steps shown.': 'Démarrage du traitement des brûlures. Suivez les étapes.',
+            'starting stroke - fast protocol. follow the steps shown.': 'Démarrage du protocole d\'AVC. Suivez les étapes.',
+            'starting seizure response. follow the steps shown.': 'Démarrage du protocole de crise d\'épilepsie. Suivez les étapes.',
+            'starting allergic reaction. follow the steps shown.': 'Démarrage du protocole de réaction allergique. Suivez les étapes.',
+            'repeating:': 'Répétition:',
+            'checking protocol.': 'Vérification du protocole.',
+            'sign language recognized. opening ': 'Langue des signes reconnue. Ouverture du protocole ',
+            'sign detected:': 'Signe détecté:'
+          },
+          'es': {
+            'listening for commands.': 'Escuchando comandos.',
+            'vision impaired mode active. i will read the screen for you.': 'Modo de discapacidad visual activo. Leeré la pantalla para usted.',
+            'voice guidance deactivated.': 'Guía de voz desactivada.',
+            'dispatch error. system offline.': 'Error de envío. Sistema fuera de línea.',
+            'protocol ended. stay safe.': 'Protocolo finalizado. Manténgase seguro.',
+            'starting cpr. follow the steps shown.': 'Iniciando RCP. Siga los pasos.',
+            'starting cpr protocol. follow the steps shown.': 'Iniciando protocolo de RCP. Siga los pasos.',
+            'starting bleeding control. follow the steps shown.': 'Iniciando control de sangrado. Siga los pasos.',
+            'starting choking - heimlich. follow the steps shown.': 'Iniciando protocolo de asfixia. Siga los pasos.',
+            'starting burn treatment. follow the steps shown.': 'Iniciando tratamiento de quemaduras. Siga los pasos.',
+            'starting stroke - fast protocol. follow the steps shown.': 'Iniciando protocolo de derrame cerebral. Siga los pasos.',
+            'starting seizure response. follow the steps shown.': 'Iniciando respuesta a convulsiones. Siga los pasos.',
+            'starting allergic reaction. follow the steps shown.': 'Iniciando reacción alérgica. Siga los pasos.',
+            'repeating:': 'Repitiendo:',
+            'checking protocol.': 'Verificando protocolo.',
+            'sign language recognized. opening ': 'Lengua de señas reconocida. Abriendo protocolo ',
+            'sign detected:': 'Señal detectada:'
+          }
+        };
+
+        const langDict = dict[gtCode];
+        const lowerText = text.toLowerCase().trim();
+        if (langDict) {
+          for (const [key, val] of Object.entries(langDict)) {
+            if (lowerText.startsWith(key)) {
+              return val + text.slice(key.length);
+            }
+          }
+        }
+
+        // Dynamic translation request via backend API (Gemini/Google Translate)
+        try {
+          const res = await axios.post('/api/translate', { text: text, to: gtCode });
+          if (res.data && res.data.translatedText) {
+            return res.data.translatedText;
+          }
+        } catch(e) {
+          console.log("[ResQVoice] Translation endpoint error:", e);
+        }
+
+        return text;
+      }
+
+      async speak(text, isAlreadyTranslated = false) {
         if (this.synth.speaking) this.synth.cancel();
+        window.utterances = [];
+
+        // Remove emojis to prevent voice synthesis from reading them out loud
+        let cleanText = text ? text.replace(/[\uD800-\uDFFF]|[\u2600-\u27BF]/g, '').replace(/\s+/g, ' ').trim() : '';
+        if (!cleanText) return;
 
         // 1. PAUSE LISTENING (Prevent Echo)
         if (this.isListening) {
@@ -1278,12 +1627,22 @@
           this.wasListening = true;
         }
 
-        const utter = new SpeechSynthesisUtterance(text);
+        // Translate text if needed
+        let finalText = cleanText;
+        if (!isAlreadyTranslated) {
+          try {
+            finalText = await this.translateIfNeeded(cleanText);
+          } catch(e) {
+            console.log("Translation failed", e);
+          }
+        }
+
+        const utter = new SpeechSynthesisUtterance(finalText);
 
         // ── Detect active Google Translate language from cookie ──
         const gtLangMap = {
           'ar':'ar-SA','fr':'fr-FR','es':'es-ES','ur':'ur-PK','hi':'hi-IN',
-          'zh-CN':'zh-CN','de':'de-DE','tr':'tr-TR','ru':'ru-RU','id':'id-ID',
+          'zh-cn':'zh-CN','de':'de-DE','tr':'tr-TR','ru':'ru-RU','id':'id-ID',
           'ms':'ms-MY','fa':'fa-IR','bn':'bn-BD','pt':'pt-PT','en':'en-US'
         };
         const cookieMatch = document.cookie.match(/googtrans=\/[a-z-]+\/([a-z-]+)/i);
@@ -1293,20 +1652,20 @@
 
         // ── Select best voice for the detected language ──
         const voices = this.synth.getVoices();
-        // Priority: 1) female voice for target lang, 2) any female/Zira voice, 3) male for target lang
         const femaleKeywords = ['female','zira','google uk english female','google us english','samantha','victoria','karen','moira','tessa','fiona'];
         const isFemale = v => femaleKeywords.some(k => v.name.toLowerCase().includes(k));
-        const langVoice = voices.find(v => v.lang === speechLang && isFemale(v))
-            || voices.find(v => v.lang.startsWith(gtCode) && isFemale(v))
-            || voices.find(v => isFemale(v))          // any female voice (keep lang tag for pronunciation)
-            || voices.find(v => v.lang === speechLang); // last resort: male for target lang
+        const langVoice = voices.find(v => (v.lang === speechLang || v.lang.replace('_', '-').toLowerCase() === speechLang.toLowerCase()) && isFemale(v))
+            || voices.find(v => v.lang.toLowerCase().startsWith(gtCode) && isFemale(v))
+            || voices.find(v => v.lang === speechLang || v.lang.replace('_', '-').toLowerCase() === speechLang.toLowerCase())
+            || voices.find(v => v.lang.toLowerCase().startsWith(gtCode))
+            || voices.find(v => isFemale(v))          
+            || voices.find(v => v.default); 
         if (langVoice) utter.voice = langVoice;
         utter.rate = 1.1;
         utter.pitch = 1.0;
 
         // 2. RESUME LISTENING (The "Handshake")
         const resumeMic = () => {
-          console.log("Speech Finished. Resuming Mic...");
           if (this.wasListening || resq.active) {
             try {
               this.recognition.start();
@@ -1314,21 +1673,23 @@
               this.speak_visuals(true);
               resq.playPing(); // AUDITORY CUE: "I'm listening now"
             } catch (e) {
-              // Ignore "already started" errors
               if (e.name !== 'InvalidStateError') console.log("Mic restart error", e);
             }
           }
         };
 
-        utter.onend = resumeMic;
+        utter.onend = () => {
+          this.speak_visuals(false);
+          resumeMic();
+        };
 
-        // 3. SAFETY NET (If browser speech hangs, force resume after expected duration)
-        // Avg reading speed ~ 4 chars/100ms. + 1s buffer.
-        const safeDuration = (text.length * 80) + 1500;
-        setTimeout(() => {
-          if (!this.isListening && (this.wasListening || resq.active)) resumeMic();
-        }, safeDuration);
+        utter.onerror = (e) => {
+          this.speak_visuals(false);
+          resumeMic();
+        };
 
+        this.speak_visuals(true);
+        window.utterances.push(utter);
         this.synth.speak(utter);
       }
 
@@ -1447,120 +1808,171 @@
         }
       }
 
-
-      // ═══════════════════════════════════════════════════════
-      // BUILT-IN ILLUSTRATED EMERGENCY PROTOCOLS
-      // Each step has: instruction text, detail, illustration SVG, type
-      // ═══════════════════════════════════════════════════════
       // ── helper to build a photo illustration tag ──
       _img(src, anim) {
-        return `<img src="/static/procedures/${src}" alt="procedure" class="proc-photo${anim?' '+anim:''}" onerror="this.style.display='none'">`;
+        const getSrc = (s) => s.startsWith('/static/') ? s : `/static/img/${s}`;
+        if (Array.isArray(src)) {
+          const img1 = getSrc(src[0]);
+          const img2 = getSrc(src[1]);
+          return `
+            <div class="flipbook-container${anim?' '+anim:''}" style="position:relative; width:100%; height:180px; max-width:320px; margin:0 auto; overflow:hidden; border-radius:16px; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));">
+              <img src="${img1}" alt="frame1" class="flipbook-frame frame-a" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;" onerror="this.style.display='none'">
+              <img src="${img2}" alt="frame2" class="flipbook-frame frame-b" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;" onerror="this.style.display='none'">
+            </div>
+          `;
+        }
+        const imgSrc = getSrc(src);
+        return `<img src="${imgSrc}" alt="procedure" class="proc-photo${anim?' '+anim:''}" style="width:100%; max-height:180px; object-fit:contain; border-radius:16px; margin:0 auto; display:block; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));" onerror="this.style.display='none'">`;
       }
 
       get ILLUSTRATED_PROTOCOLS() {
         const I = (src, anim) => this._img(src, anim);
-        const SVG = {
-          default:`<svg viewBox="0 0 200 160" class="proto-svg"><path d="M100 20 L132 60 L175 65 L148 92 L155 135 L100 110 L45 135 L52 92 L25 65 L68 60Z" fill="none" stroke="#38bdf8" stroke-width="2"/><circle cx="100" cy="80" r="25" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/><text x="100" y="85" text-anchor="middle" fill="#38bdf8" font-size="18">+</text><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Stay calm - help is on the way</text></svg>`,
-          done:`<svg viewBox="0 0 200 160" class="proto-svg"><circle cx="100" cy="75" r="55" fill="none" stroke="#22c55e" stroke-width="3"/><polyline points="72,75 92,95 130,55" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0 120" to="120 120" dur="0.6s" fill="freeze"/></polyline><text x="100" y="150" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">WELL DONE - PROTOCOL COMPLETE</text></svg>`,
-          cpr1: `<svg viewBox="0 0 200 160" class="proto-svg"><rect x="60" y="30" width="80" height="110" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/><ellipse cx="100" cy="45" rx="20" ry="22" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><rect x="75" y="68" width="50" height="60" rx="6" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><text x="100" y="100" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="bold">PATIENT</text><rect x="40" y="100" width="120" height="12" rx="4" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="4,2"/><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Check responsiveness</text></svg>`,
-          cpr2: `<svg viewBox="0 0 200 160" class="proto-svg"><rect x="60" y="30" width="80" height="110" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/><ellipse cx="100" cy="45" rx="20" ry="22" fill="#2d3a4e"/><rect x="75" y="68" width="50" height="60" rx="6" fill="#2d3a4e"/><g fill="none" stroke="#ef4444" stroke-width="2.5"><line x1="100" y1="50" x2="140" y2="30"/><line x1="140" y1="30" x2="155" y2="35"/></g><text x="155" y="28" fill="#ef4444" font-size="9" font-weight="bold">911</text><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Call emergency services</text></svg>`,
-          cpr3: `<svg viewBox="0 0 200 160" class="proto-svg animate-breathe"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><rect x="72" y="65" width="56" height="65" rx="6" fill="#2d3a4e"/><ellipse cx="100" cy="75" rx="15" ry="10" fill="none" stroke="#22c55e" stroke-width="2.5"/><path d="M85 65 Q100 50 115 65" fill="none" stroke="#22c55e" stroke-width="2" stroke-dasharray="3,2"/><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Tilt head, lift chin</text></svg>`,
-          cpr4: `<svg viewBox="0 0 200 160" class="proto-svg" id="cpr-anim"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#ef4444" stroke-width="2.5"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><rect x="72" y="65" width="56" height="65" rx="6" fill="#2d3a4e"/><rect x="78" y="72" width="44" height="30" rx="4" fill="#ef4444" opacity="0.3"/><rect id="comp-hand" x="80" y="58" width="40" height="16" rx="5" fill="#f97316" opacity="0.9"><animate attributeName="y" values="58;68;58" dur="0.55s" repeatCount="indefinite"/></rect><text x="100" y="150" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="bold">110 BPM - PUSH HARD</text></svg>`,
-          cpr5: `<svg viewBox="0 0 200 160" class="proto-svg animate-breathe"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#22c55e" stroke-width="2.5"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><ellipse cx="100" cy="55" rx="12" ry="8" fill="#22c55e" opacity="0.3"/><path d="M90 60 Q100 70 110 60" fill="none" stroke="#22c55e" stroke-width="2"/><rect x="72" y="68" width="56" height="62" rx="6" fill="#2d3a4e"/><text x="100" y="150" text-anchor="middle" fill="#22c55e" font-size="9">Seal mouth - breathe twice</text></svg>`,
-          bleed1:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="70" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><circle cx="100" cy="70" r="18" fill="#ef4444" opacity="0.7"/><path d="M88 60 Q100 50 112 60 Q100 100 88 60Z" fill="#b91c1c" opacity="0.8"/><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Identify the wound</text></svg>`,
-          bleed2:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="70" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><rect x="72" y="48" width="56" height="44" rx="6" fill="#f8fafc" opacity="0.9"/><path d="M72 70 H128" stroke="#e2e8f0" stroke-width="1"/><text x="100" y="105" text-anchor="middle" fill="#475569" font-size="8" font-weight="bold">CLOTH/GAUZE</text><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Apply clean cloth - press HARD</text></svg>`,
-          bleed3:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="70" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><rect x="72" y="48" width="56" height="44" rx="6" fill="#f8fafc" opacity="0.7"/><path d="M85 48 L85 92 M90 48 L90 92" stroke="#e2e8f0" stroke-width="1"/><circle cx="138" cy="55" r="12" fill="#ef4444" opacity="0.9"><animate attributeName="r" values="10;14;10" dur="1s" repeatCount="indefinite"/></circle><text x="138" y="59" text-anchor="middle" fill="white" font-size="8" font-weight="bold">!</text><text x="100" y="140" text-anchor="middle" fill="#94a3b8" font-size="9">Press firmly - do not lift</text></svg>`,
-          bleed4:`<svg viewBox="0 0 200 160" class="proto-svg"><line x1="60" y1="20" x2="60" y2="140" stroke="#38bdf8" stroke-width="1" stroke-dasharray="4,3"/><ellipse cx="100" cy="80" rx="40" ry="55" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/><path d="M100 30 L100 130" stroke="#64748b" stroke-width="1" stroke-dasharray="3,3"/><text x="30" y="70" fill="#38bdf8" font-size="8">HEART</text><path d="M55 68 L75 68" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arrow)"/><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Elevate wound above heart</text></svg>`,
-          choke1:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="40" rx="22" ry="25" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><rect x="78" y="65" width="44" height="60" rx="6" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><path d="M100 75 L100 55" stroke="#f97316" stroke-width="3"/><circle cx="100" cy="73" r="5" fill="#f97316"><animate attributeName="r" values="4;7;4" dur="0.8s" repeatCount="indefinite"/></circle><text x="100" y="145" text-anchor="middle" fill="#94a3b8" font-size="9">Confirm choking - can they speak?</text></svg>`,
-          choke2:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="35" rx="22" ry="24" fill="#2d3a4e" stroke="#64748b"/><rect x="78" y="59" width="44" height="70" rx="6" fill="#2d3a4e" stroke="#64748b"/><path d="M60 90 Q70 80 80 90" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/><path d="M120 90 Q130 80 140 90" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/><rect x="85" y="80" width="30" height="22" rx="4" fill="#38bdf8" opacity="0.2"/><text x="100" y="115" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="bold">5 BACK BLOWS</text><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">Stand beside - lean them forward</text></svg>`,
-          choke3:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="35" rx="22" ry="24" fill="#2d3a4e" stroke="#64748b"/><rect x="78" y="59" width="44" height="70" rx="6" fill="#2d3a4e" stroke="#64748b"/><circle cx="82" cy="95" r="8" fill="#ef4444" opacity="0.8"><animate attributeName="cy" values="95;85;95" dur="0.6s" repeatCount="indefinite"/></circle><circle cx="118" cy="95" r="8" fill="#ef4444" opacity="0.8"><animate attributeName="cy" values="95;85;95" dur="0.6s" repeatCount="indefinite"/></circle><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">Thrust inward &amp; upward - 5 times</text></svg>`,
-          burn1: `<svg viewBox="0 0 200 160" class="proto-svg"><path d="M100 20 Q130 40 120 70 Q140 50 130 80 Q150 60 130 100 Q120 130 100 140 Q80 130 70 100 Q50 60 70 80 Q60 50 80 70 Q70 40 100 20Z" fill="#f97316" opacity="0.8"><animate attributeName="d" values="M100 20 Q130 40 120 70 Q140 50 130 80 Q150 60 130 100 Q120 130 100 140 Q80 130 70 100 Q50 60 70 80 Q60 50 80 70 Q70 40 100 20Z;M100 18 Q135 38 122 72 Q142 52 132 82 Q152 62 132 102 Q122 132 100 142 Q78 132 68 102 Q48 62 68 82 Q58 52 78 72 Q65 38 100 18Z;M100 20 Q130 40 120 70 Q140 50 130 80 Q150 60 130 100 Q120 130 100 140 Q80 130 70 100 Q50 60 70 80 Q60 50 80 70 Q70 40 100 20Z" dur="1.5s" repeatCount="indefinite"/></path><text x="100" y="155" text-anchor="middle" fill="#94a3b8" font-size="9">Remove from heat source - safely</text></svg>`,
-          burn2: `<svg viewBox="0 0 200 160" class="proto-svg"><path d="M70 40 Q100 30 130 40 L130 110 Q100 120 70 110Z" fill="#2d3a4e" stroke="#64748b" stroke-width="1.5"/><path d="M75 50 L125 50" stroke="#38bdf8" stroke-width="1.5" opacity="0.5"/><polyline points="50,30 65,60 65,120" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linecap="round"><animate attributeName="stroke-dashoffset" values="100;0" dur="1.5s" repeatCount="indefinite"/></polyline><text x="100" y="145" text-anchor="middle" fill="#94a3b8" font-size="9">Cool with lukewarm water 10–20 min</text></svg>`,
-          stroke1:`<svg viewBox="0 0 200 160" class="proto-svg"><ellipse cx="100" cy="75" rx="50" ry="60" fill="#1e293b" stroke="#818cf8" stroke-width="2"/><text x="75" y="65" fill="#22c55e" font-size="22">😊</text><text x="108" y="65" fill="#ef4444" font-size="22">😶</text><line x1="100" y1="40" x2="100" y2="110" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="4,3"/><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">FAST: Face drooping on one side?</text></svg>`,
-          seizure1:`<svg viewBox="0 0 200 160" class="proto-svg"><rect x="55" y="25" width="90" height="115" rx="10" fill="#1e293b" stroke="#818cf8" stroke-width="2"/><ellipse cx="100" cy="42" rx="20" ry="22" fill="#2d3a4e"/><rect x="72" y="65" width="56" height="65" rx="6" fill="#2d3a4e"/><rect x="30" y="90" width="140" height="8" rx="4" fill="#818cf8" opacity="0.7"/><text x="100" y="148" text-anchor="middle" fill="#94a3b8" font-size="9">Clear the area - remove hazards</text></svg>`,
-          default:`<svg viewBox="0 0 200 160" class="proto-svg"><path d="M100 20 L132 60 L175 65 L148 92 L155 135 L100 110 L45 135 L52 92 L25 65 L68 60Z" fill="none" stroke="#38bdf8" stroke-width="2"/><circle cx="100" cy="80" r="25" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/><text x="100" y="85" text-anchor="middle" fill="#38bdf8" font-size="18">+</text><text x="100" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">Stay calm - help is on the way</text></svg>`,
-          done: `<svg viewBox="0 0 200 160" class="proto-svg"><circle cx="100" cy="75" r="55" fill="none" stroke="#22c55e" stroke-width="3"/><polyline points="72,75 92,95 130,55" stroke="#22c55e" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0 120" to="120 120" dur="0.6s" fill="freeze"/></polyline><text x="100" y="150" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">WELL DONE - PROTOCOL COMPLETE</text></svg>`
-        };
+        const finishSvg = `<div style="font-size:4rem; text-align:center; padding:20px; color:#22c55e; animation: pulse 2s infinite;"><i class="fa-solid fa-circle-check"></i></div>`;
+
+        // Inline SVGs for warnings
+        const seizureMouthWarningSvg = `
+          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:320px; display:block; margin:0 auto;">
+            <defs>
+              <filter id="glow-red-mouth" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            <rect width="200" height="200" rx="24" fill="rgba(15, 23, 42, 0.6)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <path d="M 60,150 C 60,110 70,80 100,80 C 110,80 115,85 120,80 C 125,75 125,60 130,55 C 135,50 145,50 150,60" fill="none" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+            <path d="M 120,105 Q 140,105 145,115 Q 140,125 120,125 Z" fill="#1e293b" stroke="#64748b" stroke-width="3"/>
+            <line x1="130" y1="107" x2="130" y2="111" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <line x1="135" y1="107" x2="135" y2="111" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <line x1="130" y1="123" x2="130" y2="119" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <line x1="135" y1="123" x2="135" y2="119" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M 70,115 L 115,115 Q 125,115 125,118 Q 125,121 115,121 L 70,121 Z" fill="#cbd5e1" stroke="#94a3b8" stroke-width="2"/>
+            <g class="animate-warning-pulse" style="transform-origin: 100px 100px;">
+              <circle cx="100" cy="115" r="45" fill="none" stroke="#ef4444" stroke-width="10" filter="url(#glow-red-mouth)"/>
+              <line x1="68" y1="83" x2="132" y2="147" stroke="#ef4444" stroke-width="10" filter="url(#glow-red-mouth)"/>
+            </g>
+          </svg>
+        `;
+
+        const burnBlisterWarningSvg = `
+          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:320px; display:block; margin:0 auto;">
+            <defs>
+              <filter id="glow-red-blister" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            <rect width="200" height="200" rx="24" fill="rgba(15, 23, 42, 0.6)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <path d="M 20,150 Q 70,150 85,150 Q 100,120 115,150 Q 130,150 180,150" fill="none" stroke="#e11d48" stroke-width="5" stroke-linecap="round"/>
+            <path d="M 85,150 Q 100,120 115,150 Z" fill="rgba(234, 179, 8, 0.4)" stroke="#eab308" stroke-width="2"/>
+            <path d="M 140,80 L 115,115" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 140,80 L 155,60" fill="none" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="155" cy="60" r="3" fill="#64748b"/>
+            <g class="animate-warning-pulse" style="transform-origin: 100px 100px;">
+              <circle cx="100" cy="115" r="45" fill="none" stroke="#ef4444" stroke-width="10" filter="url(#glow-red-blister)"/>
+              <line x1="68" y1="83" x2="132" y2="147" stroke="#ef4444" stroke-width="10" filter="url(#glow-red-blister)"/>
+            </g>
+          </svg>
+        `;
+
+        const emergencyCallSvg = `
+          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:320px; display:block; margin:0 auto;">
+            <defs>
+              <filter id="glow-green-call" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="5" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            <rect width="200" height="200" rx="24" fill="rgba(15, 23, 42, 0.6)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <rect x="70" y="40" width="60" height="120" rx="10" fill="#0f172a" stroke="#475569" stroke-width="4"/>
+            <rect x="75" y="55" width="50" height="90" rx="4" fill="#1e293b"/>
+            <line x1="95" y1="47" x2="105" y2="47" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+            <text x="100" y="85" fill="#ef4444" font-size="16" font-weight="900" text-anchor="middle" letter-spacing="1">911</text>
+            <text x="100" y="102" fill="#22c55e" font-size="8" font-weight="700" text-anchor="middle" class="animate-pulse">CALLING...</text>
+            <circle cx="100" cy="122" r="10" fill="#22c55e" filter="url(#glow-green-call)"/>
+            <path d="M 97,118 Q 100,116 103,118 L 102,121 Q 100,120 98,121 Z" fill="white"/>
+            <path d="M 97,118 L 98,121 C 99,123 101,123 102,121 L 103,118" fill="white"/>
+            <circle cx="100" cy="122" r="18" fill="none" stroke="#22c55e" stroke-width="1.5" opacity="0.5" class="animate-pulse"/>
+          </svg>
+        `;
 
         return {
           cpr: {
             title: '🫀 CPR Protocol',
             color: '#ef4444',
             steps: [
-              { text: 'Scene Safety & Check Response', detail: 'Tap shoulders firmly - shout "Are you OK?". If no response, call for help.', svg: SVG.default, type:'action' },
-              { text: 'Call Emergency Services NOW', detail: 'Dial 911 immediately. Put on loudspeaker. Tell them: location, unconscious person, not breathing.', svg: I('cpr_check.png'), type:'action' },
-              { text: 'Open the Airway', detail: 'Tilt head back with one hand on forehead, lift chin with 2 fingers. Check for breathing - 10 seconds.', svg: I('cpr_check.png'), type:'action' },
-              { text: 'Give 2 Rescue Breaths', detail: 'Pinch nose closed. Make a seal over the mouth. Blow steadily for 1 second - watch chest rise. Repeat twice.', svg: I('cpr_rescue_breath.png','anim-breathe'), type:'action' },
-              { text: '30 Chest Compressions - 110 BPM', detail: 'Interlock hands on CENTER of chest. Arms STRAIGHT. Push down 5–6 cm HARD and FAST. Let chest fully rise between compressions.', svg: I('cpr_compression.png','anim-compress'), type:'metronome', bpm:110 },
-              { text: 'Cycle: 30 Compressions → 2 Breaths', detail: 'Keep repeating. Do not stop unless patient breathes normally or EMS takes over. You are their heartbeat.', svg: I('cpr_compression.png','anim-compress'), type:'action' },
+              { text: 'Scene Safety & Check Response', detail: 'Tap shoulders firmly - shout "Are you OK?". If no response, call for help.', svg: I(['cpr_step1_check_1779571574320.png', '/static/procedures/cpr_check.png'], 'anim-cpr-check'), type:'action' },
+              { text: 'Call Emergency Services NOW', detail: 'Dial 911 immediately. Put on loudspeaker. Tell them: location, unconscious person, not breathing.', svg: I('cpr_step2_call_1779571593075.png', 'animate-pulse'), type:'action' },
+              { text: 'Open the Airway', detail: 'Tilt head back with one hand on forehead, lift chin with 2 fingers. Check for breathing - 10 seconds.', svg: I('cpr_step3_airway_1779571605782.png'), type:'action' },
+              { text: 'Give 2 Rescue Breaths', detail: 'Pinch nose closed. Make a seal over the mouth. Blow steadily for 1 second - watch chest rise. Repeat twice.', svg: I(['cpr_step4_breath_1779571618567.png', '/static/procedures/cpr_rescue_breath.png'], 'anim-rescue-breath'), type:'action' },
+              { text: '30 Chest Compressions - 110 BPM', detail: 'Interlock hands on CENTER of chest. Arms STRAIGHT. Push down 5–6 cm HARD and FAST. Let chest fully rise between compressions.', svg: I(['cpr_step5_compress_1779571632673.png', '/static/procedures/cpr_compression.png'], 'anim-cpr-compress'), type:'metronome', bpm:110 },
+              { text: 'Cycle: 30 Compressions → 2 Breaths', detail: 'Keep repeating. Do not stop unless patient breathes normally or EMS takes over. You are their heartbeat.', svg: I('cpr_realistic.png'), type:'action' },
             ]
           },
           bleeding: {
             title: '🩸 Bleeding Control',
             color: '#ef4444',
             steps: [
-              { text: 'Expose & Identify the Wound', detail: 'Carefully cut or remove clothing around the wound. Wear gloves if available. Assess how severe the bleeding is.', svg: I('bleeding_pressure.png'), type:'action' },
-              { text: 'Apply Firm Direct Pressure', detail: 'Press a clean cloth, gauze or cloth pad directly on the wound. Use your full hand - press HARD.', svg: I('bleeding_pressure.png'), type:'action' },
-              { text: 'Hold - Do NOT Lift the Cloth!', detail: 'If it soaks through, add more material ON TOP. Never remove the first layer - it helps the blood clot. Keep pressing.', svg: I('bleeding_pressure.png','anim-pulse'), type:'action' },
-              { text: 'Elevate Above the Heart', detail: 'If an arm or leg, raise it higher than the level of the heart. This slows blood flow and helps the clot form.', svg: I('bleeding_pressure.png'), type:'action' },
-              { text: 'Watch for Shock', detail: 'Signs: pale/cold skin, rapid weak pulse, confusion, fainting. Lay patient flat, keep them warm. Call 911 if not done.', svg: SVG.default, type:'action' },
+              { text: 'Expose & Identify the Wound', detail: 'Carefully cut or remove clothing around the wound. Wear gloves if available. Assess how severe the bleeding is.', svg: I('bleed_step1_expose_1779571647808.png'), type:'action' },
+              { text: 'Apply Firm Direct Pressure', detail: 'Press a clean cloth, gauze or cloth pad directly on the wound. Use your full hand - press HARD.', svg: I(['bleed_step2_pressure_1779571660278.png', '/static/procedures/bleeding_pressure.png'], 'anim-pressure'), type:'action' },
+              { text: 'Hold - Do NOT Lift the Cloth!', detail: 'If it soaks through, add more material ON TOP. Never remove the first layer - it helps the blood clot. Keep pressing.', svg: I('bleeding_realistic.png', 'animate-pulse'), type:'action' },
+              { text: 'Elevate Above the Heart', detail: 'If an arm or leg, raise it higher than the level of the heart. This slows blood flow and helps the clot form.', svg: I('bleed_step4_elevate_1779571672644.png'), type:'action' },
+              { text: 'Watch for Shock', detail: 'Signs: pale/cold skin, rapid weak pulse, confusion, fainting. Lay patient flat, keep them warm. Call 911 if not done.', svg: I('bleed_step5_shock_1779571686056.png'), type:'action' },
             ]
           },
           choking: {
             title: '😮‍💨 Choking - Heimlich',
             color: '#f97316',
             steps: [
-              { text: 'Confirm They Are Choking', detail: 'Ask "Are you choking?" Cannot speak, cough or breathe, or has blue lips = full blockage. Act immediately.', svg: SVG.default, type:'action' },
-              { text: '5 Sharp Back Blows', detail: 'Stand beside and slightly behind them. Lean them forward. Strike firmly 5 times between shoulder blades with the heel of your hand.', svg: I('choking_back.png'), type:'action' },
-              { text: '5 Abdominal Thrusts (Heimlich)', detail: 'Stand behind patient. Make a fist - thumb side against abdomen, above navel, below chest. Cover with other hand. Pull SHARPLY inward and upward 5 times.', svg: I('choking_heimlich.png','anim-thrust'), type:'action' },
-              { text: 'Repeat Until Airway Clears', detail: 'Alternate 5 back blows then 5 abdominal thrusts. If they become unconscious, start CPR and call 911.', svg: I('choking_heimlich.png'), type:'action' },
+              { text: 'Confirm They Are Choking', detail: 'Ask "Are you choking?" Cannot speak, cough or breathe, or has blue lips = full blockage. Act immediately.', svg: I('choke_step1_ask_1779571716150.png'), type:'action' },
+              { text: '5 Sharp Back Blows', detail: 'Stand beside and slightly behind them. Lean them forward. Strike firmly 5 times between shoulder blades with the heel of your hand.', svg: I(['choke_back_blows_1779999270492.png', '/static/procedures/choking_back.png'], 'anim-choking-blows'), type:'action' },
+              { text: '5 Abdominal Thrusts (Heimlich)', detail: 'Stand behind patient. Make a fist - thumb side against abdomen, above navel, below chest. Cover with other hand. Pull SHARPLY inward and upward 5 times.', svg: I(['choke_heimlich_1779999286139.png', '/static/procedures/choking_heimlich.png'], 'anim-choking-thrusts'), type:'action' },
+              { text: 'Repeat Until Airway Clears', detail: 'Alternate 5 back blows then 5 abdominal thrusts. If they become unconscious, start CPR and call 911.', svg: I('choking_realistic.png'), type:'action' },
             ]
           },
           burn: {
             title: '🔥 Burn Treatment',
             color: '#f97316',
             steps: [
-              { text: 'Remove from Heat Source', detail: 'Move the patient away from the heat safely. Remove clothing NEAR the burn ONLY if NOT stuck to skin. Remove watches and jewelry before swelling starts.', svg: I('burn_remove.png'), type:'action' },
-              { text: 'Cool with Running Water', detail: 'Hold the burn under cool (NOT cold) running water for 10 to 20 minutes. Do NOT use ice, butter, toothpaste or creams - they make it worse.', svg: I('burn_water.png','anim-water'), type:'action' },
-              { text: 'Cover Loosely', detail: 'After cooling, cover with a clean non-fluffy material - cling film or a clean plastic bag works well. Do not wrap tightly - leave room for swelling.', svg: I('burn_cover.png'), type:'action' },
-              { text: 'Do NOT Burst Blisters', detail: 'Blisters form a sterile barrier that protects against infection. Never pop them. Keep the burn clean and avoid touching it with bare hands.', svg: I('burn_cover.png','anim-pulse'), type:'action' },
-              { text: 'Seek Medical Care', detail: 'Call 911 for: burns larger than 3cm, burns on face/hands/genitals/feet/joints, deep burns, chemical/electrical burns, or any burn in a child or elderly person.', svg: SVG.done, type:'action' },
+              { text: 'Remove from Heat Source', detail: 'Move the patient away from the heat safely. Remove clothing NEAR the burn ONLY if NOT stuck to skin. Remove watches and jewelry before swelling starts.', svg: I('/static/procedures/burn_remove.png'), type:'action' },
+              { text: 'Cool with Running Water', detail: 'Hold the burn under cool (NOT cold) running water for 10 to 20 minutes. Do NOT use ice, butter, toothpaste or creams - they make it worse.', svg: I(['burn_water_1779999300846.png', '/static/procedures/burn_water.png'], 'anim-water'), type:'action' },
+              { text: 'Cover Loosely', detail: 'After cooling, cover with a clean non-fluffy material - cling film or a clean plastic bag works well. Do not wrap tightly - leave room for swelling.', svg: I(['burn_cover_1779999315339.png', '/static/procedures/burn_cover.png'], 'anim-cover'), type:'action' },
+              { text: 'Do NOT Burst Blisters', detail: 'Blisters form a sterile barrier that protects against infection. Never pop them. Keep the burn clean and avoid touching it with bare hands.', svg: burnBlisterWarningSvg, type:'action' },
+              { text: 'Seek Medical Care', detail: 'Call 911 for: burns larger than 3cm, burns on face/hands/genitals/feet/joints, deep burns, chemical/electrical burns, or any burn in a child or elderly person.', svg: I('burns_realistic.png'), type:'action' },
             ]
           },
           stroke: {
             title: '🧠 Stroke - FAST Protocol',
             color: '#818cf8',
             steps: [
-              { text: 'FACE - Ask Them to Smile', detail: 'Ask the person to smile. Look carefully: Is one side of the face drooping or numb? An uneven or lopsided smile is a key stroke warning sign.', svg: I('stroke_fast.png','anim-breathe'), type:'action' },
-              { text: 'ARMS - Raise Both Arms', detail: 'Ask the patient to raise both arms at the same time and hold them up. Does one arm drift downward or feel weak? Arm weakness is a major stroke sign.', svg: I('stroke_arm.png'), type:'action' },
-              { text: 'SPEECH - Repeat a Phrase', detail: 'Ask them to say "The sky is blue and it is a sunny day". Is their speech slurred, garbled, or strange? Can they understand you? Speech problems are a stroke sign.', svg: I('stroke_speech.png'), type:'action' },
-              { text: 'TIME - Call 911 RIGHT NOW', detail: 'If ANY FAST sign is present, call 911 IMMEDIATELY. Note the EXACT time symptoms started - tell this to EMS. Every minute counts - brain tissue is being lost.', svg: I('stroke_call.png','anim-pulse'), type:'action' },
-              { text: 'Position and Wait for EMS', detail: 'If conscious: sit them upright, supported. If unconscious: recovery position on their side. Do NOT give food or water. Stay with them and talk calmly.', svg: I('stroke_position.png'), type:'action' },
+              { text: 'FACE - Ask Them to Smile', detail: 'Ask the person to smile. Look carefully: Is one side of the face drooping or numb? An uneven or lopsided smile is a key stroke warning sign.', svg: I(['stroke_face_1779999329564.png', '/static/procedures/stroke_fast.png'], 'anim-stroke-face'), type:'action' },
+              { text: 'ARMS - Raise Both Arms', detail: 'Ask the patient to raise both arms at the same time and hold them up. Does one arm drift downward or feel weak? Arm weakness is a major stroke sign.', svg: I(['stroke_arms_1779999346919.png', '/static/procedures/stroke_arm.png'], 'anim-stroke-arms'), type:'action' },
+              { text: 'SPEECH - Repeat a Phrase', detail: 'Ask them to say "The sky is blue and it is a sunny day". Is their speech slurred, garbled, or strange? Can they understand you? Speech problems are a stroke sign.', svg: I('/static/procedures/stroke_speech.png'), type:'action' },
+              { text: 'TIME - Call 911 RIGHT NOW', detail: 'If ANY FAST sign is present, call 911 IMMEDIATELY. Note the EXACT time symptoms started - tell this to EMS. Every minute counts - brain tissue is being lost.', svg: I('/static/procedures/stroke_call.png'), type:'action' },
+              { text: 'Position and Wait for EMS', detail: 'If conscious: sit them upright, supported. If unconscious: recovery position on their side. Do NOT give food or water. Stay with them and talk calmly.', svg: I('/static/procedures/stroke_position.png'), type:'action' },
             ]
           },
           seizure: {
             title: '⚡ Seizure Response',
             color: '#eab308',
             steps: [
-              { text: 'Clear the Area Immediately', detail: 'Do NOT restrain the person. Move hard or sharp objects away. Gently cushion their head with a folded jacket or soft item. Loosen any tight clothing around the neck.', svg: I('seizure_clear.png'), type:'action' },
-              { text: 'Do NOT Put Anything in Mouth', detail: 'This is a dangerous myth - people CANNOT swallow their tongue. NEVER put fingers, a wallet, or any object in the mouth. This risks broken teeth and serious injury to both of you.', svg: I('seizure_clear.png','anim-pulse'), type:'action' },
-              { text: 'Time the Seizure', detail: 'Note the exact time the seizure started. Call 911 if: it lasts more than 5 minutes, a second seizure follows, they are injured, diabetic, pregnant, or do not regain consciousness.', svg: I('seizure_time.png'), type:'action' },
-              { text: 'Recovery Position After Convulsions', detail: 'Once shaking stops, gently roll the patient onto their side (recovery position). This keeps the airway clear from saliva and prevents choking. Support their head.', svg: I('seizure_position.png'), type:'action' },
-              { text: 'Stay and Monitor', detail: 'After the seizure, the person may be confused and exhausted - this is normal. Talk gently and reassure them. Monitor breathing. Do not leave them alone until fully recovered.', svg: SVG.done, type:'action' },
+              { text: 'Clear the Area Immediately', detail: 'Do NOT restrain the person. Move hard or sharp objects away. Gently cushion their head with a folded jacket or soft item. Loosen any tight clothing around the neck.', svg: I('seizure_clear_1779999365133.png'), type:'action' },
+              { text: 'Do NOT Put Anything in Mouth', detail: 'This is a dangerous myth - people CANNOT swallow their tongue. NEVER put fingers, a wallet, or any object in the mouth. This risks broken teeth and serious injury to both of you.', svg: seizureMouthWarningSvg, type:'action' },
+              { text: 'Time the Seizure', detail: 'Note the exact time the seizure started. Call 911 if: it lasts more than 5 minutes, a second seizure follows, they are injured, diabetic, pregnant, or do not regain consciousness.', svg: I('/static/procedures/seizure_time.png'), type:'action' },
+              { text: 'Recovery Position After Convulsions', detail: 'Once shaking stops, gently roll the patient onto their side (recovery position). This keeps the airway clear from saliva and prevents choking. Support their head.', svg: I('/static/procedures/seizure_position.png'), type:'action' },
+              { text: 'Stay and Monitor', detail: 'After the seizure, the person may be confused and exhausted - this is normal. Talk gently and reassure them. Monitor breathing. Do not leave them alone until fully recovered.', svg: I('seizure_realistic.png'), type:'action' },
             ]
           },
           allergy: {
             title: '⚠️ Allergic Reaction',
             color: '#22c55e',
             steps: [
-              { text: 'Remove or Move Away from Trigger', detail: 'Identify the allergen (food, insect sting, medication, latex) and remove it immediately or move the patient away from it. Remove the stinger if visible by scraping sideways.', svg: I('allergy_epipen.png'), type:'action' },
-              { text: 'Use EpiPen if Available', detail: 'If patient has a prescribed auto-injector (EpiPen): remove blue safety cap, press orange tip firmly against OUTER thigh, hold for 10 seconds. Can be given through clothing.', svg: I('allergy_epipen.png','anim-pulse'), type:'action' },
-              { text: 'Call 911 - Anaphylaxis is Life-Threatening', detail: 'Hives + swelling of mouth/throat + breathing difficulty = anaphylaxis. Call 911 NOW even if EpiPen was used - a second dose may be needed and hospital care is essential.', svg: I('stroke_call.png'), type:'action' },
-              { text: 'Position the Patient Correctly', detail: 'Breathing difficulty - sit upright leaning forward. Feeling faint or pale - lay FLAT with legs raised 30cm. Unconscious - recovery position on their side. Never stand them up suddenly.', svg: I('allergy_position.png'), type:'action' },
-              { text: 'Monitor Until EMS Arrives', detail: 'Stay calm and reassure the patient. Monitor breathing every minute. Do NOT give antihistamines as a replacement for epinephrine. Be ready to perform CPR if breathing stops.', svg: SVG.done, type:'action' },
+              { text: 'Remove or Move Away from Trigger', detail: 'Identify the allergen (food, insect sting, medication, latex) and remove it immediately or move the patient away from it. Remove the stinger if visible by scraping sideways.', svg: I('allergy_realistic.png'), type:'action' },
+              { text: 'Use EpiPen if Available', detail: 'If patient has a prescribed auto-injector (EpiPen): remove blue safety cap, press orange tip firmly against OUTER thigh, hold for 10 seconds. Can be given through clothing.', svg: I(['allergy_epipen_1779999381315.png', '/static/procedures/allergy_epipen.png'], 'anim-epipen'), type:'action' },
+              { text: 'Call 911 - Anaphylaxis is Life-Threatening', detail: 'Hives + swelling of mouth/throat + breathing difficulty = anaphylaxis. Call 911 NOW even if EpiPen was used - a second dose may be needed and hospital care is essential.', svg: emergencyCallSvg, type:'action' },
+              { text: 'Position the Patient Correctly', detail: 'Breathing difficulty - sit upright leaning forward. Feeling faint or pale - lay FLAT with legs raised 30cm. Unconscious - recovery position on their side. Never stand them up suddenly.', svg: I('/static/procedures/allergy_position.png'), type:'action' },
+              { text: 'Monitor Until EMS Arrives', detail: 'Stay calm and reassure the patient. Monitor breathing every minute. Do NOT give antihistamines as a replacement for epinephrine. Be ready to perform CPR if breathing stops.', svg: finishSvg, type:'action' }
             ]
           }
-
         };
       }
 
@@ -1650,7 +2062,7 @@
                 <span style="background:${color}22; border:1px solid ${color}; color:${color}; padding:3px 10px; border-radius:6px; font-size:0.75rem; font-weight:800; letter-spacing:1px;">
                   ${proto.title}
                 </span>
-                <span style="color:#64748b; font-size:0.8rem; font-weight:700;">Step ${idx+1} / ${total}</span>
+                <span id="resq-step-count" style="color:#64748b; font-size:0.8rem; font-weight:700;">Step ${idx+1} / ${total}</span>
               </div>
               <!-- Progress bar -->
               <div style="height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
@@ -1665,10 +2077,10 @@
 
             <!-- Instruction -->
             <div style="text-align:center; margin-bottom:1.2rem;">
-              <div style="font-size:1.55rem; font-weight:900; color:#ffffff; line-height:1.3; margin-bottom:0.5rem; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+              <div id="resq-step-text" style="font-size:1.55rem; font-weight:900; color:#ffffff; line-height:1.3; margin-bottom:0.5rem; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
                 ${step.text}
               </div>
-              <div style="font-size:0.95rem; color:#94a3b8; line-height:1.6; font-weight:500;">
+              <div id="resq-step-detail" style="font-size:0.95rem; color:#94a3b8; line-height:1.6; font-weight:500;">
                 ${step.detail || ''}
               </div>
               ${step.type === 'metronome' ? `
@@ -1698,7 +2110,22 @@
 
         // TTS narration
         if (voice) {
-          setTimeout(() => voice.speak(`Step ${idx+1}. ${step.text}. ${step.detail}`), 400);
+          setTimeout(() => {
+            const countEl = document.getElementById('resq-step-count');
+            const textEl = document.getElementById('resq-step-text');
+            const detailEl = document.getElementById('resq-step-detail');
+
+            let stepCountStr = `Step ${idx + 1}`;
+            if (countEl) {
+              const fullText = countEl.innerText;
+              stepCountStr = fullText.split('/')[0].trim();
+            }
+
+            const stepTextStr = textEl ? textEl.innerText.trim() : step.text;
+            const stepDetailStr = detailEl ? detailEl.innerText.trim() : (step.detail || '');
+
+            voice.speak(`${stepCountStr}. ${stepTextStr}. ${stepDetailStr}`, true);
+          }, 450);
         }
 
         // Start metronome
@@ -1729,10 +2156,19 @@
         }
       }
 
-      proRepeat() {
+      async proRepeat() {
         if (voice) {
           const step = this.currentProtocol.steps[this.currentStepIdx];
-          voice.speak(`Repeating: ${step.text}. ${step.detail}`);
+          const textEl = document.getElementById('resq-step-text');
+          const detailEl = document.getElementById('resq-step-detail');
+          const textStr = textEl ? textEl.innerText.trim() : step.text;
+          const detailStr = detailEl ? detailEl.innerText.trim() : (step.detail || '');
+
+          let prefix = "Repeating:";
+          if (typeof voice.translateIfNeeded === 'function') {
+            prefix = await voice.translateIfNeeded("repeating:");
+          }
+          voice.speak(`${prefix} ${textStr}. ${detailStr}`, true);
         }
       }
 
@@ -1856,14 +2292,35 @@
 
       // ── Real LLM / medical chat ──
       const typingBubble = _appendBubble('nurse', '💭 thinking…', true);
-      axios.post('/api/chat', { message: query, history: _chatHistory.slice(-10) })
+      const cookieMatch = document.cookie.match(/googtrans=\/[a-z-]+\/([a-z-]+)/i);
+      const uiLangCode = cookieMatch ? cookieMatch[1].toLowerCase() : 'en';
+      axios.post('/api/chat', { message: query, history: _chatHistory.slice(-10), language: uiLangCode })
         .then(r => {
           const reply = r.data && r.data.reply ? r.data.reply : 'I am here to help. Please describe the emergency.';
           _chatHistory.push({ role:'nurse', content: reply });
-          if (typingBubble) typingBubble.innerHTML = _renderMd(reply);
+          if (typingBubble) typingBubble.innerHTML = "I've prepared a guide. Follow the steps below.";
           const t = document.getElementById('_sara-typing');
           if (t) { t.id=''; t.style.opacity='1'; }
-          if (voice) voice.speak(reply.replace(/<[^>]+>/g,'').substring(0,120));
+          
+          // Parse ||| delimited steps
+          let stepsText = reply.split('|||').map(s => s.trim()).filter(s => s.length > 0);
+          if (stepsText.length > 1) {
+              // It's a multi-step guide
+              let dynamicSteps = stepsText.map((txt, idx) => ({
+                  text: `Step ${idx+1}`, 
+                  detail: txt,
+                  svg: '<div style="font-size:3rem; text-align:center; padding:20px; color:var(--accent-cyan);"><i class="fa-solid fa-notes-medical"></i></div>',
+                  type: 'action'
+              }));
+              resq.currentProtocol = { title: 'AI Assistant Guide', color: '#0ea5e9', steps: dynamicSteps };
+              resq.currentStepIdx = 0;
+              resq.active = true;
+              resq.renderProStep();
+          } else {
+              // Just a regular single response
+              if (typingBubble) typingBubble.innerHTML = _renderMd(reply);
+              if (voice) voice.speak(reply.replace(/<[^>]+>/g,''));
+          }
         })
         .catch(() => {
           if (typingBubble) typingBubble.innerHTML = '⚠️ Could not reach Nurse Sara. For emergencies, call <strong>911</strong> immediately.';
@@ -1903,7 +2360,7 @@
               border-radius: 24px;
               padding: 30px 20px;
               color: #fff;
-              font-family: 'Inter', sans-serif;
+              font-family: 'Poppins', sans-serif;
               box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(6, 182, 212, 0.1);
               position: relative;
               overflow: hidden;
@@ -2031,6 +2488,7 @@
           const res = await axios.get(`/api/ambulance/status/${trackId}`);
           const data = res.data;
           const status = data.status || "Responding";
+          const previousStatus = lastStatus;
           lastStatus = status; // Track state for 404 handling
 
           const etaSpan = document.getElementById('track-eta');
@@ -2046,12 +2504,29 @@
               if (gpsText) {
                   gpsText.innerHTML = `<i class="fa-solid fa-satellite-dish" style="color:#22c55e;"></i> GPS: ${data.ambulance_lat.toFixed(4)}, ${data.ambulance_lng.toFixed(4)}`;
               }
-              // Only load the iframe once to avoid flickering
-              if (!window.mapEmbeddedForAmb && data.ambulance_lat !== 0) {
-                  const iframe = document.getElementById('live-map-iframe');
-                  if (iframe) {
-                      iframe.src = `https://maps.google.com/maps?q=${data.ambulance_lat},${data.ambulance_lng}&t=m&z=16&output=embed&iwloc=Near`;
-                      window.mapEmbeddedForAmb = true;
+              // Use Leaflet for smooth moving ambulance
+              if (data.ambulance_lat !== 0) {
+                  if (!window.ambulanceMap) {
+                      window.ambulanceMap = L.map('ambulance-leaflet-map', {zoomControl: false}).setView([data.ambulance_lat, data.ambulance_lng], 15);
+                      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(window.ambulanceMap);
+                      
+                      // Patient Marker
+                      if (data.patient_lat && data.patient_lng) {
+                          L.marker([data.patient_lat, data.patient_lng]).addTo(window.ambulanceMap).bindPopup("You");
+                      }
+                      
+                      // Ambulance Marker
+                      const ambIcon = L.divIcon({
+                          className: 'custom-div-icon',
+                          html: "<div style='background-color:#eab308; width:15px; height:15px; border-radius:50%; box-shadow: 0 0 10px #eab308;'></div>",
+                          iconSize: [15, 15],
+                          iconAnchor: [7.5, 7.5]
+                      });
+                      window.ambMarker = L.marker([data.ambulance_lat, data.ambulance_lng], {icon: ambIcon}).addTo(window.ambulanceMap);
+                  } else {
+                      // Update ambulance position smoothly
+                      window.ambMarker.setLatLng([data.ambulance_lat, data.ambulance_lng]);
+                      window.ambulanceMap.setView([data.ambulance_lat, data.ambulance_lng]);
                   }
               }
           }
@@ -2061,41 +2536,64 @@
             showVolunteerToast();
           }
 
-          if (status === "ON SCENE") {
+          if (status === "ON_SCENE" || status === "ON SCENE") {
+            if (previousStatus !== "ON_SCENE" && previousStatus !== "ON SCENE") {
+                Toastify({
+                    text: "🚨 Ambulance has arrived at your location!",
+                    duration: 10000,
+                    close: true,
+                    gravity: "top",
+                    position: "center",
+                    style: { background: "#22c55e", color: "#000", fontWeight: "bold", fontSize: "1.2rem", zIndex: 9999 }
+                }).showToast();
+            }
+            const btn = document.querySelector('.btn-dispatch');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+            }
+
+            if (!window.historySaved) {
+                addToHistory(data);
+                window.historySaved = true;
+            }
+
             header.innerHTML = '<i class="fa-solid fa-location-dot"></i> AMBULANCE HERE';
             header.style.color = '#22c55e';
             etaSpan.innerText = "NOW";
             sub.innerText = "Medical crew is arriving at your side.";
 
-            // Show Distance info if we have it
             if (data.distance) {
               const distInfo = document.createElement('div');
               distInfo.innerHTML = `<small style="color:#aaa">Distance Covered: ${data.distance}</small>`;
               header.appendChild(distInfo);
             }
 
-            // HIDE CANCEL BUTTON
-            const cancelBtn = document.getElementById('btn-cancel-request');
-            if (cancelBtn) cancelBtn.style.display = 'none';
+            document.querySelectorAll('.cancel-request-btn').forEach(btn => btn.style.display = 'none');
           }
-          else if (status === "TRANSPORTING") {
+          else if (status === "TRANSPORTING" || status === "HEADS UP") {
+            const btn = document.querySelector('.btn-dispatch');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-truck-medical"></i> SEND AMBULANCE';
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+            }
+
             header.innerHTML = '<i class="fa-solid fa-truck-fast"></i> ON THE MOVE';
-            header.style.color = '#eab308'; // Yellow
+            header.style.color = '#eab308';
             etaSpan.innerText = "HOSP";
             sub.innerText = "Transporting to " + (data.destination || "ER");
 
-            // Ensure Cancel is gone
-            const cancelBtn = document.getElementById('btn-cancel-request');
-            if (cancelBtn) cancelBtn.style.display = 'none';
+            document.querySelectorAll('.cancel-request-btn').forEach(btn => btn.style.display = 'none');
 
-            // Hide the GPS tracking map
             const liveMap = document.getElementById('ambulance-live-map');
             if (liveMap) liveMap.style.display = 'none';
 
-            // USER REQUEST: Show Path to Hospital
             let mapContainer = document.getElementById('transport-map');
             if (mapContainer && mapContainer.dataset.lastDest !== destQuery) {
-                // If it exists but destination changed, recreate it to update iframe
                 mapContainer.remove();
                 mapContainer = null;
             }
@@ -2107,12 +2605,15 @@
               mapContainer.style.height = '200px';
               mapContainer.style.marginTop = '20px';
               mapContainer.style.background = '#222';
-              
               mapContainer.innerHTML = `<iframe width="100%" height="100%" frameborder="0" style="border:0" src="https://maps.google.com/maps?q=${destQuery}&t=m&z=14&output=embed&iwloc=Near"></iframe>`;
               document.querySelector('#step-track').appendChild(mapContainer);
             }
           }
-          else if (status === "HEADS UP" || status === "ARRIVED") {
+          else if (status === "ARRIVED" || status === "Completed") {
+            if (status === "Completed") {
+                data.status = "Completed";
+                addToHistory(data);
+            }
             handleArrival(data);
           }
 
@@ -2126,17 +2627,29 @@
       }, 2000);
     }
 
+    window.arrivalDataCache = null;
     function handleArrival(data) {
       if (trackingInterval) clearInterval(trackingInterval);
+      window.arrivalDataCache = data;
 
-      if (!window.historySaved) {
-        addToHistory(data); // Safely handles partial data
-        window.historySaved = true;
-
+      if (!window.arrivalAlertPlayed) {
         // Play Success Sound
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
         audio.play().catch(() => { });
+        
+        Toastify({
+            text: "🏥 You have arrived at the ER!",
+            duration: 10000,
+            close: true,
+            gravity: "top",
+            position: "center",
+            style: { background: "#22c55e", color: "#000", fontWeight: "bold", fontSize: "1.2rem", zIndex: 9999 }
+        }).showToast();
+        
+        window.arrivalAlertPlayed = true;
       }
+
+      document.querySelectorAll('.cancel-request-btn').forEach(btn => btn.style.display = 'none');
 
       const header = document.querySelector('#step-track h2');
       const etaSpan = document.getElementById('track-eta');
@@ -2144,24 +2657,50 @@
 
       header.innerHTML = '<i class="fa-solid fa-hospital"></i> ARRIVED AT ER';
       header.style.color = '#22c55e';
-      etaSpan.innerText = "SAFE";
-      sub.innerText = "You have been admitted to Emergency Care.";
+      if (etaSpan) etaSpan.innerText = "SAFE";
+      
+      // Completely clear the track element's inner div and replace with a massive Acknowledge button
+      const trackInner = document.querySelector('#step-track > div');
+      if (trackInner) {
+          trackInner.innerHTML = `
+            <div style="font-size: 2rem; font-weight: 800; color: #22c55e; margin-bottom: 20px;">MISSION COMPLETE</div>
+            <p style="color: white; font-size: 1.2rem; margin-bottom: 30px;">You have been successfully transferred to Emergency Care.</p>
+            <button id="btn-acknowledge-arrival" onclick="acknowledgeArrival()" class="btn btn-filled" style="background: #22c55e; color: black; font-weight: 900; width: 100%; padding: 25px; font-size: 1.5rem; border-radius: 15px; box-shadow: 0 0 30px rgba(34, 197, 94, 0.5); border: 2px solid #fff;">
+                <i class="fa-solid fa-check-double"></i> ACKNOWLEDGE ARRIVAL
+            </button>
+          `;
+      }
 
       // Hide maps
       const tm = document.getElementById('transport-map');
       if (tm) tm.style.display = 'none';
       const am = document.getElementById('ambulance-live-map');
       if (am) am.style.display = 'none';
-      
-      // Auto Redirect after 5s
-      if (!window.redirectTimer) {
-        sub.innerText += " Redirecting to home in 5s...";
-        window.redirectTimer = setTimeout(() => {
-          localStorage.removeItem('ambulance_dispatched');
-          localStorage.removeItem('my_sos_id');
-          location.reload();
-        }, 5000);
-      }
+      document.querySelectorAll('.cancel-request-btn').forEach(btn => btn.style.display = 'none');
+    }
+    
+    function acknowledgeArrival() {
+        if (window.arrivalDataCache) {
+            window.arrivalDataCache.status = "Completed";
+            addToHistory(window.arrivalDataCache);
+        }
+        localStorage.removeItem('ambulance_dispatched');
+        localStorage.removeItem('my_sos_id');
+        location.reload();
+    }
+
+    async function cancelAmbulanceRequest() {
+        if (!confirm("Are you sure you want to cancel the ambulance request?")) return;
+        const my_id = localStorage.getItem('my_sos_id');
+        if (my_id) {
+            try {
+                await axios.post('/api/ambulance/cancel', { id: my_id });
+            } catch(e) {}
+        }
+        localStorage.removeItem('ambulance_dispatched');
+        localStorage.removeItem('my_sos_id');
+        if (trackingInterval) clearInterval(trackingInterval);
+        location.reload();
     }
 
     function callAmbulance() {
@@ -2350,41 +2889,83 @@
     // --- HISTORY LOGIC ---
     function addToHistory(data) {
       const history = JSON.parse(localStorage.getItem('resq_history') || '[]');
+      const currentSosId = localStorage.getItem('my_sos_id') || data.id;
+      
+      const existingIndex = history.findIndex(h => h.id == currentSosId);
+      const statusText = data.status === "ARRIVED" ? "Admitted" : (data.status || "Responding");
+      
       const entry = {
-        date: new Date().toLocaleString(),
+        id: currentSosId,
+        date: existingIndex >= 0 ? history[existingIndex].date : new Date().toISOString(),
         symptoms: data.symptoms || "Emergency Dispatch",
         hospital: data.destination || "General Hospital",
-        status: "Admitted"
+        arrival_time: new Date().toLocaleTimeString(),
+        status: statusText,
+        vitals: data.vitals || null
       };
-      history.unshift(entry); // Add to top
+      
+      if (existingIndex >= 0) {
+          history[existingIndex] = entry;
+      } else {
+          history.unshift(entry); // Add to top
+      }
+      
       localStorage.setItem('resq_history', JSON.stringify(history));
       renderHistory();
     }
 
-    function renderHistory() {
-      const history = JSON.parse(localStorage.getItem('resq_history') || '[]');
+    async function renderHistory() {
+      let serverHistory = [];
+      try {
+          const res = await axios.get('/api/patient/me/history');
+          serverHistory = res.data || [];
+      } catch (e) { console.error('Failed to fetch server history', e); }
+      
+      let localHistory = JSON.parse(localStorage.getItem('resq_history') || '[]');
+      const thirtyMinsAgo = new Date(Date.now() - 30 * 60000);
+      const filtered = localHistory.filter(h => new Date(h.date) > thirtyMinsAgo);
+      if (filtered.length !== localHistory.length) {
+          localHistory = filtered;
+          localStorage.setItem('resq_history', JSON.stringify(localHistory));
+      }
+      const history = [...localHistory, ...serverHistory];
+      
       const container = document.getElementById('history-list');
       if (!container) return;
 
       if (history.length === 0) {
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#666; font-size:1rem; padding:2rem;">No previous emergency calls logged.</div>';
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color:#666; font-size:1rem; padding:2rem;">No previous emergency calls or hospital records logged.</div>';
         return;
       }
 
-      container.innerHTML = history.map((h, index) => `
+      container.innerHTML = history.map((h, index) => {
+            let vitalsHtml = '';
+            if (h.vitals && h.vitals.hr && h.vitals.hr !== "--") {
+                vitalsHtml = `<div style="margin-top: 8px; font-size: 0.8rem; color: #cbd5e1; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 5px;"><i class="fa-solid fa-heart-pulse"></i> HR: ${h.vitals.hr} | SpO2: ${h.vitals.spo2} | BP: ${h.vitals.sys_bp}/${h.vitals.dia_bp}</div>`;
+            } else {
+                vitalsHtml = `<div style="margin-top: 8px; font-size: 0.75rem; color: #64748b; font-style: italic;">Vitals not recorded</div>`;
+            }
+            return `
             <div class="modern-history-card" onclick="showHistoryDetail(${index})">
-                <div style="font-size:0.8rem; color: #94a3b8; margin-bottom:0.5rem;">${h.date}</div>
+                <div style="font-size:0.8rem; color: #94a3b8; margin-bottom:0.5rem;">${new Date(h.date).toLocaleString()}</div>
                 <div style="font-weight:bold; color:white; font-size:1.1rem; margin-bottom:0.5rem;">${h.symptoms}</div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.9rem; color:#cbd5e1;"><i class="fa-solid fa-hospital"></i> ${h.hospital}</span>
                     <span style="font-size:0.8rem; padding:2px 8px; border-radius:10px; background:rgba(34, 197, 94, 0.2); color:#4ade80;">${h.status}</span>
                 </div>
+                ${vitalsHtml}
             </div>
-        `).join('');
+        `}).join('');
     }
 
-    function showHistoryDetail(index) {
-      const history = JSON.parse(localStorage.getItem('resq_history') || '[]');
+    async function showHistoryDetail(index) {
+      let serverHistory = [];
+      try {
+          const res = await axios.get('/api/patient/me/history');
+          serverHistory = res.data || [];
+      } catch (e) { }
+      const localHistory = JSON.parse(localStorage.getItem('resq_history') || '[]');
+      const history = [...localHistory, ...serverHistory];
       const h = history[index];
       if (!h) return;
 
@@ -2403,11 +2984,11 @@
             <div style="background:rgba(0,0,0,0.3); padding:1rem; border-radius:8px;">
                 <div style="color:var(--accent-cyan); margin-bottom:0.5rem; font-weight:bold;">Vitals Log (Snapshot)</div>
                 <div style="display:flex; gap:1rem; font-family:monospace;">
-                    <div>HR: <span style="color:white">--</span></div>
-                    <div>BP: <span style="color:white">--/--</span></div>
-                    <div>O2: <span style="color:white">--%</span></div>
+                    <div>HR: <span style="color:white">${h.vitals && h.vitals.hr !== undefined && h.vitals.hr !== null ? h.vitals.hr : '--'}</span></div>
+                    <div>BP: <span style="color:white">${h.vitals && h.vitals.sys_bp !== undefined && h.vitals.sys_bp !== null ? h.vitals.sys_bp + '/' + h.vitals.dia_bp : '--/--'}</span></div>
+                    <div>O2: <span style="color:white">${h.vitals && h.vitals.spo2 !== undefined && h.vitals.spo2 !== null ? h.vitals.spo2 + '%' : '--%'}</span></div>
                 </div>
-                <div style="font-size:0.8rem; color:#666; margin-top:0.5rem;">* Vitals data not available for this record.</div>
+                ${(!h.vitals || h.vitals.hr === undefined || h.vitals.hr === null) ? '<div style="font-size:0.8rem; color:#666; margin-top:0.5rem;">* Vitals data not available for this record.</div>' : ''}
             </div>
         `;
       document.getElementById('history-detail-modal').style.display = 'flex';
@@ -2694,6 +3275,7 @@
     }
   };
   </script>
+    </div>
 </body>
 </html>
 
