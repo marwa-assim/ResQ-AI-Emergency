@@ -2181,5 +2181,6 @@ def mesh_page():
 
 
 if __name__ == '__main__':
-    print("[SocketIO] Starting real-time server on port 5000...")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    print(f"[SocketIO] Starting real-time server on port {port}...")
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
