@@ -10,6 +10,6 @@ numpy>=1.24.0
 pandas>=2.0.0
 scikit-learn>=1.3.0
 joblib>=1.3.0
-mindspore @ https://ms-release.obs.cn-north-4.myhuaweicloud.com/2.3.0/MindSpore/cpu/x86_64/mindspore-2.3.0-cp39-cp39-linux_x86_64.whl
+mindspore==2.0.0
 Flask-SocketIO==5.3.6
 eventlet
