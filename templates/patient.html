@@ -1080,10 +1080,12 @@
          localStorage.removeItem('signLanguageInput');
          document.getElementById('ai-text-input').value = signedWord;
          // Trigger AI visually and via voice
-         if (voice) {
-             voice.speak("Sign Language recognized. Opening " + signedWord + " protocol.");
-             searchFirstAid(signedWord);
+         if (typeof voice !== 'undefined' && voice) {
+             try {
+                 voice.speak("Sign Language recognized. Opening " + signedWord + " protocol.");
+             } catch(e) {}
          }
+         searchFirstAid(signedWord);
       }
     };
 
@@ -1991,7 +1993,9 @@
               if (!hasIntent && !isShortCommand) return null;
               // Map to protocol key once intent/short-command is confirmed
               if (t.includes('cpr') || t.includes('cardiac arrest') || t.includes('heart attack') ||
-                  t.includes('chest compression') || t.includes('not breathing') || t.includes('no pulse'))
+                  t.includes('chest compression') || t.includes('not breathing') || t.includes('no pulse') ||
+                  t.includes('chest pain') || t.includes('trouble breathing') || t.includes('unconscious') ||
+                  t.includes('help') || t.includes('dizzy'))
                   return 'cpr';
               if (t.includes('bleed') || t.includes('hemorrh') || t.includes('wound'))  return 'bleeding';
               if (t.includes('choke') || t.includes('choking') || t.includes('heimlich'))  return 'choking';
