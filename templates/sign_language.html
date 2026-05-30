@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ResQ - Sign Language Triage</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -477,7 +478,7 @@
     <a href="/patient" style="position:absolute;top:16px;left:16px;color:#64748b;text-decoration:none;font-size:0.85rem;display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(15,23,42,0.7);border:1px solid rgba(100,116,139,0.3);border-radius:20px;transition:all 0.2s;" onmouseover="this.style.color='#38bdf8';this.style.borderColor='#38bdf8'" onmouseout="this.style.color='#64748b';this.style.borderColor='rgba(100,116,139,0.3)'">
         ← Back to Patient Portal
     </a>
-    <div class="logo-badge">🤟 ResQ Sign Language Agent</div>
+    <div class="logo-badge" style="color:#eab308; background:rgba(234,179,8,0.1); border-color:rgba(234,179,8,0.25);"><i class="fa-solid fa-hands-asl-interpreting" style="margin-right: 6px;"></i> ResQ Sign Language Agent</div>
     <h1 class="hero">Communicate Without<br>Saying a Word</h1>
     <p class="hero-sub">
         Use your hands to sign your symptoms using <strong>American Sign Language (A–Z)</strong>.
@@ -499,7 +500,7 @@
 <!-- ======================== STEP 2: LIVE SIGNING ======================== -->
 <section id="step-sign" class="step">
     <div class="sign-header">
-        <span class="brand">🤟 ResQ Sign Language</span>
+        <span class="brand" style="color:#eab308;"><i class="fa-solid fa-hands-asl-interpreting" style="margin-right: 6px;"></i> ResQ Sign Language</span>
         <a href="/patient" class="speak-override">🎙 I can speak instead →</a>
     </div>
 
@@ -524,10 +525,33 @@
 
                 <div id="gesture-hint">Hold each letter gesture for ~0.5s to confirm it</div>
             </div>
+            
+            <!-- Emergency Gesture Guide -->
+            <div id="emergency-gesture-guide" style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem; background: rgba(15,23,42,0.6); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(234,179,8,0.3); box-shadow: inset 0 0 15px rgba(234,179,8,0.05); font-family: 'Poppins', sans-serif;">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #eab308; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-hands-asl-interpreting"></i> Emergency Gesture Dictionary
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; font-size: 0.8rem;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: #f1f5f9;"><span style="font-size: 1.2rem;">🆘</span> <div><b>HELP</b><br><span style="color:#94a3b8; font-size:0.75rem;">Open palm</span></div></div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: #f1f5f9;"><span style="font-size: 1.2rem;">💗</span> <div><b>CPR</b><br><span style="color:#94a3b8; font-size:0.75rem;">Fist (fingers curled)</span></div></div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: #f1f5f9;"><span style="font-size: 1.2rem;">🩸</span> <div><b>BLEEDING</b><br><span style="color:#94a3b8; font-size:0.75rem;">Index + Middle up</span></div></div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: #f1f5f9;"><span style="font-size: 1.2rem;">📞</span> <div><b>CALL 911</b><br><span style="color:#94a3b8; font-size:0.75rem;">Phone (thumb+pinky)</span></div></div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: #f1f5f9;"><span style="font-size: 1.2rem;">😣</span> <div><b>PAIN</b><br><span style="color:#94a3b8; font-size:0.75rem;">Point index finger</span></div></div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: #f1f5f9;"><span style="font-size: 1.2rem;">🤚</span> <div><b>CHOKE</b><br><span style="color:#94a3b8; font-size:0.75rem;">Hand at throat</span></div></div>
+                </div>
+            </div>
         </div>
 
         <!-- Controls -->
         <div class="control-col">
+            <!-- Mode Switcher -->
+            <div style="margin-bottom: 1.5rem;">
+                <button id="emergency-mode-btn" onclick="toggleEmergencyMode()" class="modern-btn"
+                    style="width: 100%; font-size: 1.1rem; padding: 1rem; border-radius: 12px; background: linear-gradient(135deg, #ef4444, #dc2626); border: 2px solid #ef4444; color: #fff; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.3s; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(239,68,68,0.2);">
+                    🆘 Emergency Gesture Mode: ON
+                </button>
+            </div>
+
             <!-- Word Builder -->
             <div class="word-builder-section">
                 <div class="wb-label">Letter Builder</div>
@@ -617,7 +641,7 @@ function goBackToSign() {
 //  EMERGENCY GESTURE MODE (whole-word, no letter spelling)
 //  6 ASL-inspired emergency gestures each map to a command
 // ============================================================
-let emergencyModeActive = false;
+let emergencyModeActive = true;
 let emergencyGestureFrames = 0;
 let lastEmergencyGesture = '';
 const EMERGENCY_GESTURE_FRAMES = 18; // ~0.6s at 30fps
@@ -685,11 +709,13 @@ function toggleEmergencyMode() {
     const guide = document.getElementById('emergency-gesture-guide');
     if (emergencyModeActive) {
         btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        btn.style.color = '#fff';
         btn.textContent = '🆘 Emergency Gesture Mode: ON';
         if (guide) guide.style.display = 'flex';
         speak('Emergency gesture mode activated. Show: open palm for Help, fist for CPR, peace sign for Bleeding, phone hand for Call 911.');
     } else {
         btn.style.background = 'rgba(239,68,68,0.15)';
+        btn.style.color = '#ef4444';
         btn.textContent = '🆘 Activate Emergency Gesture Mode';
         if (guide) guide.style.display = 'none';
         speak('Emergency mode off. Use letter spelling for custom messages.');
@@ -1083,24 +1109,11 @@ async function confirmAndSend() {
     // Store for patient portal
     localStorage.setItem('signLanguageInput', msg);
 
-    // Call AI Consult
-    try {
-        const resp = await fetch('/api/ai_consult', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: msg, source: 'sign_language' })
-        });
-        const data = await resp.json();
-        localStorage.setItem('aiConsultResult', JSON.stringify(data));
-    } catch (e) {
-        console.warn('AI consult failed, continuing anyway:', e);
-    }
-
     showToast('✓ Sent to Triage Team!');
 
     setTimeout(() => {
         window.location.href = '/patient';
-    }, 1200);
+    }, 200);
 }
 
 // ============================================================

@@ -470,12 +470,18 @@
       style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444;" title="Stop AI / Stop Protocol">
       <i class="fa-solid fa-hand"></i>
     </button>
-    <button id="btn-sign-mode" onclick="window.location.href='/sign_language'" class="floating-btn" aria-label="Sign Language Mode"
+    <button id="btn-sign-mode" onclick="signLang.toggle()" class="floating-btn" aria-label="Sign Language Mode"
       title="Sign Language - talk to AI with your hands"
       style="background:rgba(234,179,8,0.12); border-color:#eab308; color:#eab308; font-size:1.3rem;">
       <i class="fa-solid fa-hands-asl-interpreting"></i>
     </button>
   </div>
+
+  <!-- Sign Language Backdrop -->
+  <div id="sl-backdrop" onclick="signLang.toggle()" style="
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px); z-index: 4999;
+  "></div>
 
   <!-- ============================================================
        SIGN LANGUAGE DRAWER - Embedded in Patient Portal
@@ -496,7 +502,7 @@
     <div style="padding: 1rem 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.07);
       display: flex; align-items: center; justify-content: space-between; flex-shrink:0;">
       <div>
-        <div style="font-weight:800; font-size:1.1rem; color:#38bdf8;">🤟 Sign Language Mode</div>
+        <div style="font-weight:800; font-size:1.1rem; color:#eab308;"><i class="fa-solid fa-hands-asl-interpreting" style="margin-right: 6px;"></i> Sign Language Mode</div>
         <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">Show hand gesture → AI reads it for you</div>
       </div>
       <button onclick="signLang.toggle()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
@@ -505,7 +511,7 @@
 
     <!-- Camera View -->
     <div style="position:relative; flex-shrink:0;">
-      <video id="sl-video" style="width:100%; height:220px; object-fit:cover; transform:scaleX(-1); display:block; background:#0f172a;"></video>
+      <video id="sl-video" autoplay muted playsinline style="width:100%; height:220px; object-fit:cover; transform:scaleX(-1); display:block; background:#0f172a;"></video>
       <canvas id="sl-canvas" style="position:absolute; top:0; left:0; width:100%; height:220px; transform:scaleX(-1);"></canvas>
 
       <!-- Loading overlay -->
@@ -832,7 +838,7 @@
           <i class="fa-solid fa-microphone"></i>
         </button>
         <!-- Sign Language toggle -->
-        <button id="sl-inline-btn" onclick="window.location.href='/sign_language'" title="Open Sign Language Page"
+        <button id="sl-inline-btn" onclick="signLang.toggle()" title="Open Sign Language Mode"
           style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#eab308;font-size:1.4rem;cursor:pointer;opacity:0.8;transition:all 0.2s;"><i class="fa-solid fa-hands-asl-interpreting"></i></button>
       </div>
       <div id="guide-container"></div>
@@ -891,16 +897,6 @@
     </div>
   </div>
 
-  <!-- HISTORY SECTION -->
-  <div style="margin-top:3rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:2rem;">
-    <h3 class="title-glow" style="text-align:center; font-size:1.5rem; margin-bottom:2rem;"><i
-        class="fa-solid fa-clock-rotate-left"></i> Emergency History</h3>
-    <!-- Grid Layout -->
-    <div id="history-list"
-      style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-      <!-- Populated by JS -->
-    </div>
-  </div>
   </div>
 
 
@@ -980,13 +976,13 @@
     <p style="text-align:center; color:#94a3b8; margin-bottom:2rem;">Manage your bio-metric and telemetry sensors.</p>
 
     <!-- DEVICE 1: SMART WATCH -->
-    <div class="card-btn" style="cursor:default; display:block;">
+    <div class="card-btn" style="cursor:default; display:block; margin-bottom:1.2rem;">
       <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
         <div style="font-weight:bold; color:var(--text-primary);"><i class="fa-solid fa-stopwatch"></i> Apex Watch Ultra
         </div>
         <div style="color:#22c55e;">Connected</div>
       </div>
-      <div style="background:rgba(0,0,0,0.3); height:60px; border-radius:8px; position:relative; overflow:hidden;">
+      <div style="background:rgba(0,0,0,0.3); height:60px; border-radius:8px; position:relative; overflow:hidden; margin-bottom:10px;">
         <!-- Simulated ECG -->
         <svg viewBox="0 0 100 20" style="width:100%; height:100%; stroke:#22c55e; fill:none; stroke-width:2px;">
           <path d="M0,10 L10,10 L15,5 L20,15 L25,10 L30,10 L35,10 L40,10 L45,5 L50,15 L55,10 L100,10">
@@ -997,26 +993,53 @@
           </path>
         </svg>
       </div>
-      <div style="margin-top:10px; display:flex; gap:10px;">
-        <div style="flex:1;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
           <div style="font-size:0.8rem; color:#888;">HEART RATE</div>
           <div style="font-size:1.5rem; font-weight:bold;">72 <span style="font-size:1rem; color:#888;">bpm</span></div>
         </div>
       </div>
+      <button onclick="simulateCardiacArrest()" class="btn-panic" style="width:100%; justify-content:center; font-size:0.85rem; padding:8px 16px; margin:0; border-radius:10px;">
+        <i class="fa-solid fa-triangle-exclamation"></i> Simulate Cardiac Arrest Dispatch
+      </button>
     </div>
 
-    <!-- DEVICE 2: CAR COMPUTER -->
-    <div class="card-btn" style="cursor:default; display:block; margin-top:1rem;">
+    <!-- DEVICE 2: SAMSUNG WATCH -->
+    <div class="card-btn" style="cursor:default; display:block; margin-top:1rem; margin-bottom:1.2rem;">
       <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-        <div style="font-weight:bold; color:var(--text-primary);"><i class="fa-solid fa-car"></i> Tesla Model Y</div>
+        <div style="font-weight:bold; color:var(--text-primary);"><i class="fa-solid fa-stopwatch"></i> Samsung Watch</div>
         <div style="color:#22c55e;">Standby</div>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div>
-          <div style="font-size:0.8rem; color:#888;">G-FORCE SENSOR</div>
+          <div style="font-size:0.8rem; color:#888;">G-FORCE / IMPACT SENSOR</div>
           <div style="font-size:1.5rem; font-weight:bold;">0.1 <span style="font-size:1rem; color:#888;">g</span></div>
         </div>
       </div>
+      <button onclick="simulateCrash()" class="btn-dispatch" style="width:100%; justify-content:center; font-size:0.85rem; padding:8px 16px; border-color:#dc2626; color:#ef4444; border-radius:10px;">
+        <i class="fa-solid fa-triangle-exclamation"></i> Simulate Impact/Fall Alert
+      </button>
+    </div>
+
+    <!-- DEVICE 3: HUAWEI WATCH GT -->
+    <div class="card-btn" style="cursor:default; display:block; margin-top:1rem; border-color: #3b82f6;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <div style="font-weight:bold; color:var(--text-primary);"><i class="fa-solid fa-stopwatch-20"></i> Huawei Watch 4 Pro</div>
+        <div style="color:#22c55e;">Connected</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <div style="font-size:0.8rem; color:#888;">BLOOD OXYGEN (SpO2)</div>
+          <div style="font-size:1.5rem; font-weight:bold;">98 <span style="font-size:1rem; color:#888;">%</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.8rem; color:#888;">FALL DETECTOR</div>
+          <div style="font-size:1.1rem; font-weight:bold; color:#22c55e;">Armed (Active)</div>
+        </div>
+      </div>
+      <button onclick="simulateHuaweiFall()" class="btn-dispatch" style="width:100%; justify-content:center; font-size:0.85rem; padding:8px 16px; border-color:#fbbf24; color:#fbbf24; border-radius:10px;">
+        <i class="fa-solid fa-person-falling"></i> Simulate Fall & Unresponsiveness
+      </button>
     </div>
 
     <button onclick="closeDevices()"
@@ -1059,7 +1082,21 @@
 
   </div>
 
+  <!-- Emergency History Section (Visible globally below active panels) -->
+  <div class="container" id="global-history-section" style="margin-top:3rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:2rem; padding-bottom: 2rem;">
+    <h3 class="title-glow" style="text-align:center; font-size:1.5rem; margin-bottom:2rem;"><i
+        class="fa-solid fa-clock-rotate-left"></i> Emergency History</h3>
+    <!-- Grid Layout -->
+    <div id="history-list"
+      style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
   <script>
+    const currentUserName = "{{ current_user.name if current_user.is_authenticated else 'Patient' }}";
+    const currentUserRole = "{{ current_user.role if current_user.is_authenticated else 'patient' }}";
+
     // ---------------------------------------------
     // SOS Logic
     // ---------------------------------------------
@@ -1764,6 +1801,7 @@
         this.interval = null;
         this.currentProtocol = null;
         this.currentStepId = null;
+        this.aslInterpreterVisible = false;
       }
 
 
@@ -2105,11 +2143,70 @@
         const progressPct = Math.round(((idx + 1) / total) * 100);
         const prevDisabled = idx === 0 ? 'opacity:0.4;cursor:not-allowed;' : '';
 
+        // Keyword-based gesture mapping fallback
+        let gestureKey = null;
+        const textLower = (step.text + ' ' + (step.detail || '')).toLowerCase();
+        
+        if (step.asl_gesture && ASL_GESTURE_LIBRARY[step.asl_gesture]) {
+          gestureKey = step.asl_gesture;
+        } else {
+          // Look for direct keyword matches
+          if (textLower.includes('cpr') || textLower.includes('compress')) {
+            gestureKey = 'cpr';
+          } else if (textLower.includes('choke') || textLower.includes('choking') || textLower.includes('blockage')) {
+            gestureKey = 'choke';
+          } else if (textLower.includes('heimlich') || textLower.includes('thrust')) {
+            gestureKey = 'heimlich';
+          } else if (textLower.includes('back blow') || textLower.includes('backblow') || textLower.includes('slap')) {
+            gestureKey = 'backblows';
+          } else if (textLower.includes('pressure') || textLower.includes('press') || textLower.includes('bleeding') || textLower.includes('wound')) {
+            gestureKey = 'pressure';
+          } else if (textLower.includes('elevate') || textLower.includes('raise') || textLower.includes('high')) {
+            gestureKey = 'elevate';
+          } else if (textLower.includes('tilt') || textLower.includes('airway') || textLower.includes('chin')) {
+            gestureKey = 'airway';
+          } else if (textLower.includes('breath') || textLower.includes('breathe') || textLower.includes('mouth-to-mouth')) {
+            gestureKey = 'breath';
+          } else if (textLower.includes('water') || textLower.includes('cool') || textLower.includes('burn') || textLower.includes('rinse')) {
+            gestureKey = 'water';
+          } else if (textLower.includes('cover') || textLower.includes('wrap') || textLower.includes('bandage')) {
+            gestureKey = 'cover';
+          } else if (textLower.includes('epipen') || textLower.includes('epi') || textLower.includes('inject')) {
+            gestureKey = 'epipen';
+          } else if (textLower.includes('smile') || textLower.includes('droop') || textLower.includes('face')) {
+            gestureKey = 'smile';
+          } else if (textLower.includes('arms') || textLower.includes('arm') || textLower.includes('weakness')) {
+            gestureKey = 'arms';
+          } else if (textLower.includes('speech') || textLower.includes('speak') || textLower.includes('talk') || textLower.includes('slur')) {
+            gestureKey = 'speech';
+          } else if (textLower.includes('call') || textLower.includes('911') || textLower.includes('phone') || textLower.includes('emergency')) {
+            gestureKey = 'call';
+          } else if (textLower.includes('safe') || textLower.includes('clear') || textLower.includes('hazard') || textLower.includes('danger')) {
+            gestureKey = 'safe';
+          } else if (textLower.includes('time') || textLower.includes('clock') || textLower.includes('watch') || textLower.includes('minute')) {
+            gestureKey = 'time';
+          } else if (textLower.includes('position') || textLower.includes('side') || textLower.includes('recovery') || textLower.includes('lie')) {
+            gestureKey = 'position';
+          } else if (textLower.includes('check') || textLower.includes('response') || textLower.includes('shout') || textLower.includes('tap')) {
+            gestureKey = 'check';
+          } else if (textLower.includes('never') || textLower.includes('avoid') || textLower.includes('do not') || textLower.includes('harmful') || textLower.includes('warning')) {
+            gestureKey = 'warning';
+          } else {
+            gestureKey = 'check';
+          }
+        }
+
+        const gesture = ASL_GESTURE_LIBRARY[gestureKey] || ASL_GESTURE_LIBRARY['check'];
+        const gestureTitle = gesture.title;
+        const gestureDesc = gesture.desc;
+        const gestureHtml = gesture.svg;
+        const showInterpreter = (typeof signLang !== 'undefined' && signLang.open) || this.aslInterpreterVisible;
+
         container.innerHTML = `
-          <div class="resq-device-screen" style="border-color:${color}33; box-shadow:0 0 30px ${color}22;">
+          <div class="resq-device-screen" style="border-color:${color}33; box-shadow:0 0 30px ${color}22; max-width:${showInterpreter ? '1000px' : '650px'}; margin: 0 auto; transition: max-width 0.4s ease;">
 
             <!-- Protocol header + progress -->
-            <div style="margin-bottom:1rem;">
+            <div style="margin-bottom:1.5rem;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
                 <span style="background:${color}22; border:1px solid ${color}; color:${color}; padding:3px 10px; border-radius:6px; font-size:0.75rem; font-weight:800; letter-spacing:1px;">
                   ${proto.title}
@@ -2122,27 +2219,86 @@
               </div>
             </div>
 
-            <!-- Illustration -->
-            <div style="display:flex; justify-content:center; margin-bottom:1rem;">
-              ${step.svg || ''}
-            </div>
+            <!-- Content Area: Conditional Grid Layout -->
+            <div class="${showInterpreter ? 'asl-split-grid' : ''}" style="margin-bottom:1.5rem;">
+              
+              <!-- LEFT: Standard instruction and media -->
+              <div style="display:flex; flex-direction:column; justify-content:center;">
+                <!-- Illustration -->
+                <div style="display:flex; justify-content:center; margin-bottom:1rem;">
+                  ${step.svg || ''}
+                </div>
 
-            <!-- Instruction -->
-            <div style="text-align:center; margin-bottom:1.2rem;">
-              <div id="resq-step-text" style="font-size:1.55rem; font-weight:900; color:#ffffff; line-height:1.3; margin-bottom:0.5rem; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
-                ${step.text}
+                <!-- Instruction -->
+                <div style="text-align:center;">
+                  <div id="resq-step-text" style="font-size:1.55rem; font-weight:900; color:#ffffff; line-height:1.3; margin-bottom:0.5rem; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+                    ${step.text}
+                  </div>
+                  <div id="resq-step-detail" style="font-size:0.95rem; color:#94a3b8; line-height:1.6; font-weight:500;">
+                    ${step.detail || ''}
+                  </div>
+
+                  ${step.type === 'metronome' ? `
+                    <div id="resq-pulse" style="margin:1rem auto; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle, ${color}, ${color}88); display:flex; align-items:center; justify-content:center; font-weight:900; color:white; font-size:0.85rem; animation:heartPulse 0.55s ease-in-out infinite; box-shadow:0 0 30px ${color}66;">
+                      110<br>BPM
+                    </div>` : ''}
+
+                  <!-- Show interpreter manually button if not open -->
+                  ${!showInterpreter ? `
+                    <button id="asl-show-btn" onclick="resq.aslInterpreterVisible=true; resq.renderProStep();" style="margin: 0.8rem auto 0; background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.25); color: #eab308; border-radius: 8px; padding: 6px 12px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;"><i class="fa-solid fa-hands-asl-interpreting"></i> Live Sign Language Interpreter</button>
+                  ` : ''}
+                </div>
               </div>
-              <div id="resq-step-detail" style="font-size:0.95rem; color:#94a3b8; line-height:1.6; font-weight:500;">
-                ${step.detail || ''}
-              </div>
-              ${step.type === 'metronome' ? `
-                <div id="resq-pulse" style="margin:1rem auto; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle, ${color}, ${color}88); display:flex; align-items:center; justify-content:center; font-weight:900; color:white; font-size:0.85rem; animation:heartPulse 0.55s ease-in-out infinite; box-shadow:0 0 30px ${color}66;">
-                  110<br>BPM
-                </div>` : ''}
+
+              <!-- RIGHT: Live ASL Interpreter Pane -->
+              ${showInterpreter ? `
+                <div style="background:rgba(15,23,42,0.6); border:1.5px solid rgba(234,179,8,0.25); border-radius:18px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; position:relative; box-shadow: 0 8px 32px rgba(0,0,0,0.3); animation: slideUpFade 0.4s ease;">
+                  
+                  <!-- Interpreter Header -->
+                  <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="display:inline-block; width:8px; height:8px; background:#eab308; border-radius:50%; box-shadow: 0 0 10px #eab308; animation: heartPulse 1.2s infinite;"></span>
+                      <span style="font-size:0.75rem; color:#eab308; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Live ASL Interpreter</span>
+                    </div>
+                    
+                    <!-- Close button (only if not forced by Sign Language Mode drawer) -->
+                    ${!(typeof signLang !== 'undefined' && signLang.open) ? `
+                      <button onclick="resq.aslInterpreterVisible=false; resq.renderProStep();" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.8rem; padding:2px 6px; border-radius:4px; transition:all 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'"><i class="fa-solid fa-xmark"></i></button>
+                    ` : ''}
+                  </div>
+
+                  <!-- Animated SVG Interpreter Window -->
+                  <div style="flex:1; display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.25); border-radius:12px; border:1px solid rgba(255,255,255,0.04); padding:15px; min-height:180px; margin-bottom:12px; position:relative; overflow:hidden;">
+                    ${gestureHtml}
+                  </div>
+
+                  <!-- Gesture text description -->
+                  <div style="background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.15); border-radius:10px; padding:10px; text-align:left;">
+                    <div style="font-size:0.8rem; font-weight:800; color:#eab308; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+                      <i class="fa-solid fa-hands-asl-interpreting"></i> ${gestureTitle}
+                    </div>
+                    <div style="font-size:0.78rem; color:#cbd5e1; line-height:1.4; font-weight:500;">
+                      ${gestureDesc}
+                    </div>
+                    
+                    <!-- Collapsible Fingerspelling Translation -->
+                    <details style="margin-top:8px; border-top:1px dashed rgba(234,179,8,0.15); padding-top:8px; cursor:pointer;">
+                      <summary style="font-size:0.7rem; color:#eab308; font-weight:700; display:flex; align-items:center; gap:4px; outline:none; user-select:none;">
+                        <i class="fa-solid fa-chevron-down" style="font-size:0.65rem;"></i> Show Fingerspelling Spelling...
+                      </summary>
+                      <div style="margin-top:6px; animation: slideUpFade 0.2s ease;">
+                        ${getAslFingerspellingHtml(step.text)}
+                      </div>
+                    </details>
+                  </div>
+
+                </div>
+              ` : ''}
+
             </div>
 
             <!-- Controls -->
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.06); padding-top:1rem;">
               <button onclick="resq.proPrev()" style="flex:1; ${prevDisabled} padding:14px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#94a3b8; border-radius:12px; font-size:0.9rem; font-weight:700; cursor:pointer;">
                 ← Back
               </button>
@@ -2270,6 +2426,254 @@
 
     const resq = new ResQEngine();
 
+    // ── ASL Alphabet URLs & Fingerspelling Helpers ──
+    const ASL_ALPHABET_URLS = {
+      "A": "https://upload.wikimedia.org/wikipedia/commons/2/27/Sign_language_A.svg",
+      "B": "https://upload.wikimedia.org/wikipedia/commons/1/18/Sign_language_B.svg",
+      "C": "https://upload.wikimedia.org/wikipedia/commons/e/e3/Sign_language_C.svg",
+      "D": "https://upload.wikimedia.org/wikipedia/commons/0/06/Sign_language_D.svg",
+      "E": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Sign_language_E.svg",
+      "F": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Sign_language_F.svg",
+      "G": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Sign_language_G.svg",
+      "H": "https://upload.wikimedia.org/wikipedia/commons/9/97/Sign_language_H.svg",
+      "I": "https://upload.wikimedia.org/wikipedia/commons/1/10/Sign_language_I.svg",
+      "J": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Sign_language_J.svg",
+      "K": "https://upload.wikimedia.org/wikipedia/commons/9/97/Sign_language_K.svg",
+      "L": "https://upload.wikimedia.org/wikipedia/commons/d/d2/Sign_language_L.svg",
+      "M": "https://upload.wikimedia.org/wikipedia/commons/c/c4/Sign_language_M.svg",
+      "N": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Sign_language_N.svg",
+      "O": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Sign_language_O.svg",
+      "P": "https://upload.wikimedia.org/wikipedia/commons/0/08/Sign_language_P.svg",
+      "Q": "https://upload.wikimedia.org/wikipedia/commons/3/34/Sign_language_Q.svg",
+      "R": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Sign_language_R.svg",
+      "S": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Sign_language_S.svg",
+      "T": "https://upload.wikimedia.org/wikipedia/commons/1/13/Sign_language_T.svg",
+      "U": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Sign_language_U.svg",
+      "V": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Sign_language_V.svg",
+      "W": "https://upload.wikimedia.org/wikipedia/commons/8/83/Sign_language_W.svg",
+      "X": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Sign_language_X.svg",
+      "Y": "https://upload.wikimedia.org/wikipedia/commons/1/1d/Sign_language_Y.svg",
+      "Z": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Sign_language_Z.svg"
+    };
+
+    function getAslFingerspellingHtml(text) {
+      const clean = text.toUpperCase().replace(/[^A-Z\s]/g, '');
+      let html = '<div style="display:inline-flex; flex-wrap:wrap; gap:5px; margin-top:8px; background:rgba(0,0,0,0.25); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">';
+      for (let i = 0; i < clean.length; i++) {
+        const char = clean[i];
+        if (char === ' ') {
+          html += '<div style="width:14px; height:32px;"></div>';
+        } else if (ASL_ALPHABET_URLS[char]) {
+          html += `
+            <div style="display:flex; flex-direction:column; align-items:center; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:4px; width:34px; box-sizing:border-box;">
+              <img src="${ASL_ALPHABET_URLS[char]}" style="width:26px; height:26px; filter:invert(1) sepia(1) saturate(10) hue-rotate(15deg); display:block;" alt="${char}">
+              <span style="font-size:0.6rem; color:#eab308; font-weight:700; margin-top:2px; line-height:1;">${char}</span>
+            </div>
+          `;
+        }
+      }
+      html += '</div>';
+      return html;
+    }
+
+    const ASL_GESTURE_LIBRARY = {
+      'check': {
+        title: 'CHECK RESPONSE',
+        desc: 'Tap shoulders and shout. Move hand in circular motion.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <circle cx="50" cy="25" r="10" />
+          <path d="M 30,55 L 70,55 M 35,55 L 35,80 M 65,55 L 65,80" />
+          <path d="M 25,35 Q 15,45 25,55" />
+          <path d="M 75,35 Q 85,45 75,55" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,-3; 0,0" dur="0.8s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'call': {
+        title: 'CALL 911 / EMERGENCY',
+        desc: 'Make a phone shape (thumb & pinky extended) and hold to ear.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 35,30 Q 30,45 35,65 Q 45,75 60,65 Q 65,45 60,30" />
+          <path d="M 35,30 C 30,20 20,25 20,35 Q 20,65 50,75 C 60,75 65,65 60,60" />
+          <path d="M 30,22 Q 15,10 25,5 M 65,68 Q 80,80 75,85" stroke-width="5" />
+          <animateTransform attributeName="transform" type="rotate" values="-5,50,50; 5,50,50; -5,50,50" dur="1s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'airway': {
+        title: 'OPEN AIRWAY',
+        desc: 'Place hand on forehead, lift chin with index and middle fingers.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 30,70 C 30,40 50,30 70,30 Q 80,45 70,60 Q 60,65 50,75 Z" />
+          <path d="M 25,85 L 45,72 M 22,80 L 42,67" stroke-width="5" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,-4; 0,0" dur="1.2s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'breath': {
+        title: 'BREATH',
+        desc: 'Hold hand near mouth and move outwards to simulate breathing waves.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 30,30 Q 15,40 20,50 Q 25,60 30,50 Z" />
+          <path d="M 40,40 Q 50,35 60,40 M 42,48 Q 55,43 65,48 M 40,56 Q 50,51 60,56" stroke-width="3" opacity="0.8">
+            <animate attributeName="stroke-dashoffset" values="20;0" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" />
+          </path>
+        </svg>`
+      },
+      'cpr': {
+        title: 'CPR / COMPRESSIONS',
+        desc: 'Interlock hands, push hard and fast on the center of the chest.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 35,45 Q 50,30 65,45 L 60,65 L 40,65 Z" />
+          <path d="M 42,38 C 42,28 58,28 58,38" />
+          <path d="M 30,58 L 70,58" stroke-width="5" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,6; 0,0" dur="0.55s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'pressure': {
+        title: 'DIRECT PRESSURE',
+        desc: 'Press flat palm firmly against wound. Do not lift.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 25,65 Q 50,55 75,65 L 75,75 L 25,75 Z" />
+          <path d="M 30,45 L 70,45 M 50,25 L 50,45" stroke-width="5" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,8; 0,0" dur="1s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'elevate': {
+        title: 'ELEVATE',
+        desc: 'Raise injured arm or leg above the level of the heart.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 30,80 L 30,55 Q 30,45 50,45 Q 70,45 70,55 L 70,80" />
+          <path d="M 50,40 L 50,15 M 40,25 L 50,15 L 60,25" stroke-width="5" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,-8; 0,0" dur="1.2s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'choke': {
+        title: 'CHOKING SIGN',
+        desc: 'Clasp hand around throat (universal choke distress sign).',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <circle cx="50" cy="25" r="10" />
+          <path d="M 45,35 L 45,55 M 55,35 L 55,55" />
+          <path d="M 35,45 Q 50,48 65,45 Q 60,52 35,45" fill="#eab308" stroke-width="2" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,2; 0,0" dur="0.8s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'backblows': {
+        title: 'BACK BLOWS',
+        desc: 'Strike heel of hand firmly downward on patient\'s back.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 25,60 C 25,40 35,30 55,30 Q 75,30 75,50" />
+          <path d="M 65,20 L 45,40" stroke-width="6" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; -10,10; 0,0" dur="0.6s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'heimlich': {
+        title: 'HEIMLICH MANEUVER',
+        desc: 'Place fist above navel, pull inward and upward sharply.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 35,35 Q 50,25 65,35 L 60,70 L 40,70 Z" />
+          <circle cx="50" cy="48" r="8" fill="#eab308" />
+          <path d="M 45,48 H 55 M 50,43 V 53" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,-6; 0,0" dur="0.7s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'water': {
+        title: 'COOL WATER',
+        desc: 'Run cool tap water over the burn for 10-20 minutes.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 30,65 L 70,65" stroke-width="5" />
+          <path d="M 40,20 L 40,55 M 50,15 L 50,55 M 60,20 L 60,55" stroke-width="3" stroke-dasharray="5 5">
+            <animate attributeName="stroke-dashoffset" values="20;0" dur="0.8s" repeatCount="indefinite" />
+          </path>
+        </svg>`
+      },
+      'cover': {
+        title: 'COVER LOOSELY',
+        desc: 'Wrap loosely with clean, non-fluffy material or plastic bag.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <circle cx="50" cy="50" r="30" stroke-dasharray="6 4" />
+          <path d="M 35,50 H 65 M 50,35 V 65" />
+          <animateTransform attributeName="transform" type="rotate" values="0,50,50; 360,50,50" dur="10s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'warning': {
+        title: 'WARNING / DANGER',
+        desc: 'Do NOT perform harmful actions (e.g. popping blisters or mouth objects).',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#ef4444; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 50,15 L 85,75 L 15,75 Z" stroke-width="5" />
+          <line x1="50" y1="35" x2="50" y2="55" stroke-width="6" />
+          <circle cx="50" cy="65" r="4" fill="#ef4444" />
+          <animateTransform attributeName="transform" type="scale" values="1; 1.05; 1" transform-origin="50 50" dur="1s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'smile': {
+        title: 'FACE / SMILE CHECK',
+        desc: 'Trace smile lines on cheeks with index fingers. Look for droop.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <circle cx="50" cy="45" r="25" />
+          <path d="M 38,48 Q 50,58 62,48" stroke-width="4" />
+          <path d="M 30,48 Q 25,48 20,40 M 70,48 Q 75,48 80,40" stroke-width="3" />
+          <animateTransform attributeName="transform" type="scale" values="1; 1.03; 1" transform-origin="50 45" dur="1.2s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'arms': {
+        title: 'ARMS WEAKNESS',
+        desc: 'Raise both arms. Look for drift or weakness on one side.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 50,30 L 50,75" />
+          <path d="M 50,45 Q 70,35 80,20 M 50,45 Q 30,50 20,65" stroke-width="5" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,2; 0,0" dur="1s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'speech': {
+        title: 'SPEECH / SPEAK',
+        desc: 'Ask them to repeat a simple phrase. Check for slurred speech.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <circle cx="35" cy="45" r="15" />
+          <path d="M 55,35 Q 65,30 75,35 M 58,45 Q 72,42 82,45 M 55,55 Q 65,58 75,55" stroke-width="3">
+            <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite" />
+          </path>
+        </svg>`
+      },
+      'epipen': {
+        title: 'EPIPEN / INJECT',
+        desc: 'Hold pen firmly, press outer thigh for 10 seconds.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 30,70 Q 50,55 70,70" stroke-width="5" />
+          <rect x="44" y="20" width="12" height="35" rx="3" fill="#eab308" stroke="none" />
+          <line x1="50" y1="55" x2="50" y2="65" stroke-width="6" />
+          <animateTransform attributeName="transform" type="translate" values="0,-5; 0,5; 0,-5" dur="0.8s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'safe': {
+        title: 'CLEAR & SAFE',
+        desc: 'Sweep both flat hands outward to clear area and ensure safety.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M 50,45 L 20,45 M 50,45 L 80,45" stroke-width="5" />
+          <path d="M 25,35 L 15,45 L 25,55 M 75,35 L 85,45 L 75,55" stroke-width="3" />
+          <animateTransform attributeName="transform" type="scale" values="1; 1.05; 1" transform-origin="50 45" dur="1.5s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'time': {
+        title: 'TIME / CLOCK',
+        desc: 'Check the exact time. Tap wrist with opposite index finger.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <circle cx="50" cy="50" r="18" />
+          <path d="M 50,50 L 50,38 M 50,50 L 60,50" />
+          <path d="M 28,28 L 42,42" stroke-width="5" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 2,-2; 0,0" dur="0.6s" repeatCount="indefinite" />
+        </svg>`
+      },
+      'position': {
+        title: 'POSITION / COMFORT',
+        desc: 'Place in recovery position on side or sit upright supported.',
+        svg: `<svg viewBox="0 0 100 100" class="asl-interpreter-svg" style="width:100px; height:100px; stroke:#eab308; fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;">
+          <circle cx="65" cy="45" r="10" />
+          <path d="M 20,65 Q 45,60 70,65 L 75,70 L 15,70 Z" />
+          <path d="M 45,55 C 45,45 55,45 55,55" />
+          <animateTransform attributeName="transform" type="translate" values="0,0; 0,-2; 0,0" dur="2s" repeatCount="indefinite" />
+        </svg>`
+      }
+    };
+
     // ── Chat history for multi-turn LLM conversation ──
     const _chatHistory = [];
 
@@ -2284,6 +2688,29 @@
         .replace(/^[•·] /gm,'<br>• ')
         .replace(/\n/g,'<br>');
     }
+
+    const ASL_SIGNS_MAP = {
+      'cpr': { label: 'CPR', emoji: '✊', hint: 'Make a fist with your hand.' },
+      'bleed': { label: 'BLEEDING', emoji: '✌️', hint: 'Show peace sign / index + middle fingers up.' },
+      'blood': { label: 'BLEEDING', emoji: '✌️', hint: 'Show peace sign / index + middle fingers up.' },
+      'chok': { label: 'CHOKING', emoji: '🤲', hint: 'Curled fingers with thumb out.' },
+      'burn': { label: 'BURN TREATMENT', emoji: '✋', hint: 'Show open palm, push forward.' },
+      'strok': { label: 'STROKE RESPONSE', emoji: '✋', hint: 'Show open palm, push forward.' },
+      'seiz': { label: 'SEIZURE RESPONSE', emoji: '👍', hint: 'Show thumb up only.' },
+      'convuls': { label: 'SEIZURE RESPONSE', emoji: '👍', hint: 'Show thumb up only.' },
+      'allerg': { label: 'ALLERGIC REACTION', emoji: '🤘', hint: 'Show index and pinky fingers up (horns).' },
+      'epipen': { label: 'ALLERGIC REACTION', emoji: '🤘', hint: 'Show index and pinky fingers up (horns).' },
+      'pain': { label: 'PAIN', emoji: '✊', hint: 'Make a fist with your hand.' },
+      'hurt': { label: 'PAIN', emoji: '✊', hint: 'Make a fist with your hand.' },
+      'dizzy': { label: 'DIZZY', emoji: '🤙', hint: 'Show thumb and pinky extended (phone sign).' },
+      'faint': { label: 'DIZZY', emoji: '🤙', hint: 'Show thumb and pinky extended (phone sign).' },
+      '911': { label: 'CALL FOR HELP', emoji: '🤙', hint: 'Show thumb and pinky extended (phone Y sign).' },
+      'ambulance': { label: 'CALL FOR HELP', emoji: '🤙', hint: 'Show thumb and pinky extended (phone Y sign).' },
+      'call': { label: 'CALL FOR HELP', emoji: '🤙', hint: 'Show thumb and pinky extended (phone Y sign).' },
+      'unconscious': { label: 'UNCONSCIOUS', emoji: '👍', hint: 'Show thumb up only.' },
+      'pass out': { label: 'UNCONSCIOUS', emoji: '👍', hint: 'Show thumb up only.' },
+      'hello': { label: 'HELLO', emoji: '👋', hint: 'Show open palm and wave.' }
+    };
 
     function _appendBubble(role, html, isTyping) {
       const log = document.getElementById('ai-chat-log');
@@ -2307,6 +2734,43 @@
       bubble.innerHTML = html;
       if (isTyping) { bubble.id = '_sara-typing'; bubble.style.opacity='0.7'; }
       el.appendChild(avatar); el.appendChild(bubble);
+
+      // Inject Sign Language translation if sign language mode is open and it's a finished nurse message
+      if (!isUser && !isTyping && typeof signLang !== 'undefined' && signLang.open) {
+        const matchedKey = Object.keys(ASL_SIGNS_MAP).find(k => html.toLowerCase().includes(k));
+        const signInfo = matchedKey ? ASL_SIGNS_MAP[matchedKey] : ASL_SIGNS_MAP['hello'];
+        
+        const signCard = document.createElement('div');
+        signCard.style.cssText = 'margin-top:10px; padding:10px; background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.25); border-radius:12px; display:flex; align-items:center; gap:12px; animation:slideUpFade 0.4s ease; text-align:left;';
+        signCard.innerHTML = `
+          <div style="font-size:1.6rem; background:#eab308; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(234,179,8,0.4); flex-shrink:0;">
+            ${signInfo.emoji}
+          </div>
+          <div>
+            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase; font-weight:800; letter-spacing:0.08em; display:flex; align-items:center; gap:4px; margin:0; line-height:1;">
+              <i class="fa-solid fa-hands-asl-interpreting" style="color:#eab308;"></i> ASL Translation
+            </div>
+            <div style="font-weight:700; color:#eab308; font-size:0.82rem; margin-top:2px; line-height:1.2;">[SIGNING: ${signInfo.label}]</div>
+            <div style="font-size:0.68rem; color:#64748b; margin-top:2px; line-height:1.2;">Sign: ${signInfo.hint}</div>
+          </div>
+        `;
+        bubble.appendChild(signCard);
+
+        // Also append the fingerspelled spelling of the text!
+        const cleanMsgText = html.replace(/<[^>]+>/g, '').trim();
+        if (cleanMsgText.length > 0) {
+          const fsCard = document.createElement('div');
+          fsCard.style.cssText = 'margin-top:8px; padding:8px; background:rgba(234,179,8,0.04); border:1px solid rgba(234,179,8,0.15); border-radius:10px; text-align:left;';
+          fsCard.innerHTML = `
+            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase; font-weight:800; letter-spacing:0.08em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+              <i class="fa-solid fa-hands-asl-interpreting" style="color:#eab308;"></i> ASL Spelling
+            </div>
+            ${getAslFingerspellingHtml(cleanMsgText)}
+          `;
+          bubble.appendChild(fsCard);
+        }
+      }
+
       log.appendChild(el);
       log.scrollTop = log.scrollHeight;
 
@@ -2401,6 +2865,29 @@
       .anim-breathe  { animation:breathe 2s ease-in-out infinite; }
       .anim-pulse    { animation:pulse 1.5s ease-in-out infinite; }
       .anim-water    { animation:waterFlow 2s ease-in-out infinite; }
+
+      /* LIVE ASL INTERPRETER GRID */
+      .asl-split-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 20px;
+        align-items: stretch;
+        margin-bottom: 1.5rem;
+      }
+      .asl-interpreter-svg {
+        width: 140px;
+        height: 140px;
+        filter: drop-shadow(0 0 8px rgba(234,179,8,0.35));
+      }
+      @media (max-width: 768px) {
+        .asl-split-grid {
+          grid-template-columns: 1fr !important;
+        }
+        .asl-interpreter-svg {
+          width: 110px;
+          height: 110px;
+        }
+      }
             /* ResQ Medical Device UI - PREMIUM GLASSMORPHISM */
             .resq-device-screen {
               background: rgba(15, 23, 42, 0.7); /* Deep Slate Glass */
@@ -2879,7 +3366,10 @@
         setTimeout(() => {
           txt.innerText = "Mesh: Connected (3 Peers)";
           btn.style.borderColor = "#f97316"; btn.style.color = "#f97316"; // Orange for Mesh
-          alert("📡 Switched to decentralized Mesh Network.\nSignal routed via nearby devices.");
+          alert("📡 Switched to decentralized Mesh Network.\nSignal routed via nearby devices.\n\nOpening Mesh Communication Portal...");
+          const name = typeof currentUserName !== 'undefined' ? encodeURIComponent(currentUserName) : 'Patient';
+          const role = typeof currentUserRole !== 'undefined' ? encodeURIComponent(currentUserRole) : 'patient';
+          window.open(`/mesh?role=${role}&name=${name}`, '_blank');
         }, 1500);
       } else {
         // Switch to 5G
@@ -2892,27 +3382,44 @@
       if (!confirm("⚠️ SIMULATION\nTrigger Automatic Cardiac Arrest Alert from Apex Watch?")) return;
 
       try {
-        await axios.post('/api/emergency/dispatch', {
+        const res = await axios.post('/api/emergency/dispatch', {
           lat: 24.7136, lng: 46.6753,
           source: "smart_watch",
           vital_data: { hr: 0, status: "CARDIAC_ARREST" }
         });
+        localStorage.setItem('my_sos_id', res.data.id);
         alert("✅ ALERT SENT\n911 Dispatched automatically by Watch.\nReason: No Pulse Detected.");
-        startTracking();
+        startTracking(res.data.id);
       } catch (e) { alert("Error: " + e.message); }
     }
 
     async function simulateCrash() {
-      if (!confirm("⚠️ SIMULATION\nTrigger 50mph Crash Alert from Tesla Computer?")) return;
+      if (!confirm("⚠️ SIMULATION\nTrigger 5.2g Impact Alert from Samsung Watch?")) return;
 
       try {
-        await axios.post('/api/emergency/dispatch', {
+        const res = await axios.post('/api/emergency/dispatch', {
           lat: 24.7136, lng: 46.6753,
           source: "crash_sensor",
           vital_data: { g_force: 5.2, airbags: "DEPLOYED" }
         });
-        alert("✅ CRASH DETECTED\nEmergency Services Notified.\nG-Force: 5.2g\nAirbags: Deployed");
-        startTracking();
+        localStorage.setItem('my_sos_id', res.data.id);
+        alert("✅ IMPACT DETECTED\nEmergency Services Notified.\nG-Force: 5.2g detected by Samsung Watch.");
+        startTracking(res.data.id);
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function simulateHuaweiFall() {
+      if (!confirm("⚠️ SIMULATION\nTrigger Automatic Fall Detection Alert from Huawei Watch 4 Pro?")) return;
+
+      try {
+        const res = await axios.post('/api/emergency/dispatch', {
+          lat: 24.7136, lng: 46.6753,
+          source: "huawei_watch",
+          vital_data: { fall_detected: true, hr: 85, status: "UNRESPONSIVE_FALL" }
+        });
+        localStorage.setItem('my_sos_id', res.data.id);
+        alert("✅ FALL DETECTED\nHuawei Watch detected a hard fall followed by 60 seconds of unresponsiveness.\nEmergency dispatch request sent automatically.");
+        startTracking(res.data.id);
       } catch (e) { alert("Error: " + e.message); }
     }
 
@@ -3116,9 +3623,6 @@
   </script>
 
   <!-- MediaPipe Hands (loaded on demand inside SignLang class) -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
   <script>
   // ══════════════════════════════════════════════════════════════════
@@ -3181,16 +3685,20 @@
       if (this.open) {
         drawer.style.right = '0';
         backdrop.style.display = 'block';
-        btn.style.background = 'rgba(56,189,248,0.3)';
+        btn.style.background = 'rgba(234,179,8,0.3)';
         this._buildGestureGrid();
         if (!this.cameraInited) this._initCamera();
       } else {
         drawer.style.right = '-420px';
         backdrop.style.display = 'none';
-        btn.style.background = 'rgba(56,189,248,0.12)';
+        btn.style.background = 'rgba(234,179,8,0.12)';
         if (this.mpCamera) this.mpCamera.stop();
         this.cameraInited = false;
         this.mpCamera = null;
+      }
+      // Re-render protocol step if active to update ASL view state
+      if (typeof resq !== 'undefined' && resq.active) {
+        resq.renderProStep();
       }
     },
 
@@ -3207,18 +3715,57 @@
       });
     },
 
-    _initCamera() {
-      this.cameraInited = true;
+    _loadScript(url) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = url;
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    },
+
+    async _initCamera() {
       const videoEl = document.getElementById('sl-video');
       const canvasEl = document.getElementById('sl-canvas');
       const ctx = canvasEl.getContext('2d');
       const loading = document.getElementById('sl-loading');
 
+      if (loading) {
+        loading.style.display = 'flex';
+        loading.style.opacity = '1';
+        const txt = loading.querySelector('div:last-child');
+        if (txt) txt.textContent = "Loading AI Libraries...";
+      }
+
+      // Load MediaPipe scripts dynamically if not present
+      if (typeof Hands === 'undefined' || typeof Camera === 'undefined' || typeof drawConnectors === 'undefined') {
+        try {
+          await this._loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js');
+          await this._loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js');
+          await this._loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js');
+        } catch (e) {
+          console.error("Failed to load MediaPipe scripts:", e);
+          const txt = loading ? loading.querySelector('div:last-child') : null;
+          if (txt) txt.textContent = "⚠️ Error loading AI libraries. Click to try again.";
+          this.cameraInited = false;
+          return;
+        }
+      }
+
+      this.cameraInited = true;
+
       // Resize canvas to match video
-      videoEl.addEventListener('loadedmetadata', () => {
+      const setCanvasSize = () => {
         canvasEl.width = videoEl.videoWidth || 640;
         canvasEl.height = videoEl.videoHeight || 480;
-      });
+      };
+      if (videoEl.videoWidth) {
+        setCanvasSize();
+      } else {
+        videoEl.addEventListener('loadedmetadata', setCanvasSize);
+      }
 
       const hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
       hands.setOptions({ maxNumHands:1, modelComplexity:1, minDetectionConfidence:0.7, minTrackingConfidence:0.6 });
@@ -3323,6 +3870,15 @@
 
       // 5. Reset progress
       document.getElementById('sl-progress').style.width = '0%';
+
+      // 6. Automatically close drawer and scroll protocol into view
+      setTimeout(() => {
+        this.toggle();
+        const guide = document.getElementById('guide-container');
+        if (guide) {
+          guide.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 1000);
     }
   };
   </script>

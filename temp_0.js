@@ -58,6 +58,12 @@
                 if (audio) { audio.volume = 0.8; audio.play().catch(() => {}); }
                 refreshAll();
             });
+            socket.on('new_incoming_self', function(data) {
+                showToast(`🔔 Self Check-In: ${data.patient_name} (ETA ${data.eta || '15'}m)`);
+                const audio = document.getElementById('alarm-sound');
+                if (audio) { audio.volume = 0.5; audio.play().catch(() => {}); }
+                fetchAmbulances();
+            });
         }
     } catch(e) {
         console.warn("Socket.IO not available, relying on fallback polling.", e);
@@ -399,7 +405,7 @@
 
                 const bed = bedData.find(b => b.id === bedId);
                 if (bed && bed.patient) {
-                    await axios.post('/api/notes', { patient_id: bed.patient.id, note: text });
+                    await axios.post('/api/notes', { patient_id: bed.patient.id, note: text, bed_id: bed.id });
                     showToast(`✅ Note added to Bed ${bedId}`);
                     await refreshAll();
                 } else {
@@ -619,12 +625,30 @@
         try { await axios.post('/api/assign', { patient_id: pid, bed_id: bid }); refreshAll(); } catch (e) { alert("Error: " + (e.response?.data?.error || "Unknown")); }
     }
 
+    function updateIncomingSubtitle(patients) {
+        const container = document.getElementById('incoming-self-container');
+        const textSpan = document.getElementById('incoming-self-text');
+        if (!container || !textSpan) return;
+        if (patients && patients.length > 0) {
+            const listStr = patients.map(p => `${p.name} (ETA ${p.eta || '15m'} - ${p.symptoms})`).join(', ');
+            textSpan.innerHTML = `Receiving: <span style="color: #ffffff; font-weight: normal;">${listStr}</span>`;
+            container.style.display = 'inline-flex';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
     // Ambulance
     async function fetchAmbulances() {
         try {
             // Use REAL endpoint now
             const res = await axios.get('/api/ambulances_real');
             const amps = res.data;
+            
+            // Filter self check-ins for the subtitle
+            const selfCheckIns = amps.filter(a => a.status === "En Route");
+            updateIncomingSubtitle(selfCheckIns);
+            
             let text = "";
             if (amps.length > 0) {
                 document.getElementById('ambulance-ticker').style.display = 'block';
@@ -635,6 +659,7 @@
                     let typeLabel = a.display_type === 'AMB' ? 'EMS' : 'SELF';
                     let dest = a.destination ? `<span style="background:#22c55e33; padding:2px 5px; border-radius:4px; color:#4ade80; font-size:0.9rem; margin-left:10px;"><i class="fa-solid fa-location-dot"></i> ${a.destination.toUpperCase()}</span>` : '';
 
+                    let vitalsStr = (a.hr && a.hr !== '--') ? `<span style="color:#cbd5e1; font-size:0.85rem;">[HR: ${a.hr} | SpO2: ${a.spo2}]</span>` : '';
                     return `
                     <span style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 0 3rem;">
                         ${icon} <b style="color: white; font-size: 1.1rem;">${typeLabel} ${a.id}</b> 
@@ -644,6 +669,7 @@
                         </span>
                         <span style="color: #ff9999; font-weight: bold;">${a.condition}</span>
                         <span style="font-style: italic; opacity: 0.7; font-size: 0.9rem;">(${a.symptoms})</span>
+                        ${vitalsStr}
                     </span>
                 `}).join('<span style="color: #333;"> | </span>');
             } else {
@@ -962,9 +988,14 @@
         loop() {
             if (!this.isRunning) return;
 
-            this.update();
-            this.draw();
-
+            try {
+                this.update();
+                this.draw();
+            } catch (e) {
+                console.error("Simulation crashed", e);
+                this.ctx.fillStyle = "red";
+                this.ctx.fillText("SYSTEM OFFLINE: " + e.message, 50, 50);
+            }
             requestAnimationFrame(() => this.loop());
         }
 

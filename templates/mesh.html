@@ -1,4 +1,4 @@
-﻿{% extends "layout.html" %}
+{% extends "layout.html" %}
 {% block content %}
 <div class="container" style="max-width:1100px;position:relative;z-index:1;">
 <canvas id="bg-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;"></canvas>
@@ -226,6 +226,22 @@ function addSysMsg(text) {
   log.appendChild(d);
   log.scrollTop = log.scrollHeight;
 }
+
+// Auto-fill and auto-connect based on query params
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const role = params.get('role');
+  const name = params.get('name');
+  if (role) {
+    document.getElementById('inp-role').value = role;
+  }
+  if (name) {
+    document.getElementById('inp-name').value = name;
+  }
+  if (role && name) {
+    setTimeout(joinMesh, 500);
+  }
+});
 
 // Particles
 const canvas = document.getElementById('bg-canvas');

@@ -5,13 +5,7 @@
     <!-- Background Particles -->
     <canvas id="bg-canvas"
         style="position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none;"></canvas>
-    <!-- Ambulance Ticker -->
-    <div id="ambulance-ticker"
-        style="background: #331111; color: #ff9999; padding: 0.5rem; border-bottom: 1px solid #ff4444; font-family: monospace; overflow: hidden; white-space: nowrap; display: none;">
-        <span style="display: inline-block; animation: scroll-left 20s linear infinite;" id="ticker-content">
-            <!-- Content -->
-        </span>
-    </div>
+    <!-- Ambulance Ticker Removed -->
 
     <header
         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-top: 1rem;">
@@ -22,12 +16,18 @@
                         style="height:80px; width:auto; filter: drop-shadow(0 0 5px rgba(6,182,212,0.5)); animation: logo3d 6s ease-in-out infinite;">
                     <div>
                         <div style="font-size: 2.2rem; line-height: 1;">ResQ AI</div>
-                        <div
-                            style="font-size: 0.9rem; color: var(--text-secondary); opacity: 0.8; font-weight: normal;">
-                            Command Center</div>
+                        <div id="dashboard-subtitle"
+                            style="font-size: 0.9rem; color: var(--text-secondary); opacity: 0.8; font-weight: normal; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span id="subtitle-role">Command Center</span>
+                        </div>
                     </div>
                 </h1>
                 <style>
+                    @keyframes subPulse {
+                        0% { opacity: 0.6; transform: scale(1); }
+                        50% { opacity: 1; transform: scale(1.25); }
+                        100% { opacity: 0.6; transform: scale(1); }
+                    }
                     @keyframes logo3d {
                         0% {
                             transform: rotateY(-15deg) translateY(0);
@@ -120,6 +120,17 @@
                     style="background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; border: 1px solid #333; font-size: 0.8rem; color: #aaa;">
                     <i class="fa-solid fa-stopwatch"></i> Delay: +2m
                 </div>
+            </div>
+        </div>
+
+        <!-- INCOMING ALERTS BAR (Static badges, no fast movement, clean design) -->
+        <div id="incoming-alerts-bar" style="display: none; flex-direction: column; gap: 0.75rem; background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 12px; padding: 1rem; backdrop-filter: blur(12px); box-shadow: 0 0 20px rgba(6, 182, 212, 0.05); margin-top: 0.5rem; animation: glowPulse 5s infinite alternate;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(6, 182, 212, 0.1); padding-bottom: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="pulse-indicator" style="width: 8px; height: 8px; background-color: #06b6d4; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #06b6d4; animation: subPulse 1.5s infinite;"></span>
+                <span style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase;">Incoming Emergency & Self Check-in Alerts</span>
+            </div>
+            <div id="alerts-container" style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                <!-- Patient Alert Badges -->
             </div>
         </div>
 
@@ -266,6 +277,11 @@
 </div>
 
 <style>
+    @keyframes scroll-left {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+    }
+
     .macro-btn {
         background: #1e293b;
         border: 1px solid #334155;
@@ -426,9 +442,22 @@
         if (typeof io !== 'undefined') {
             socket = io();
             socket.on('new_emergency', function(data) {
+                showToast(`🚨 Emergency Dispatch: ${data.name || 'Emergency'} (${data.condition || 'CRITICAL'})`);
                 const audio = document.getElementById('alarm-sound');
                 if (audio) { audio.volume = 0.8; audio.play().catch(() => {}); }
                 refreshAll();
+                fetchAmbulances();
+            });
+            socket.on('new_incoming_self', function(data) {
+                showToast(`🔔 Self Check-In: ${data.patient_name} (ETA ${data.eta || '15'}m)`);
+                const audio = document.getElementById('alarm-sound');
+                if (audio) { audio.volume = 0.5; audio.play().catch(() => {}); }
+                refreshAll();
+                fetchAmbulances();
+            });
+            socket.on('queue_update', function(data) {
+                refreshAll();
+                fetchAmbulances();
             });
         }
     } catch(e) {
@@ -991,18 +1020,61 @@
         try { await axios.post('/api/assign', { patient_id: pid, bed_id: bid }); refreshAll(); } catch (e) { alert("Error: " + (e.response?.data?.error || "Unknown")); }
     }
 
+    function updateIncomingAlerts(patients) {
+        const container = document.getElementById('incoming-alerts-bar');
+        const alertsContainer = document.getElementById('alerts-container');
+        if (!container || !alertsContainer) return;
+
+        if (patients && patients.length > 0) {
+            alertsContainer.innerHTML = patients.map(a => {
+                let isSelf = a.status === 'En Route';
+                let icon = isSelf ? '<i class="fa-solid fa-car-side" style="color: #eab308;"></i>' : '<i class="fa-solid fa-truck-medical" style="color: #ef4444;"></i>';
+                let typeLabel = isSelf ? 'SELF' : 'EMS';
+                let cardBg = isSelf ? 'rgba(234, 179, 8, 0.08)' : 'rgba(239, 68, 68, 0.08)';
+                let borderCol = isSelf ? 'rgba(234, 179, 8, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+                let badgeLabelCol = isSelf ? '#eab308' : '#ef4444';
+                let subtextCol = isSelf ? '#fde047' : '#ff9999';
+                let glowEffect = isSelf ? '0 0 10px rgba(234, 179, 8, 0.1)' : '0 0 10px rgba(239, 68, 68, 0.1)';
+                
+                let vitalsStr = (a.hr && a.hr !== '--') ? ` <span style="color:#cbd5e1; font-weight: normal; font-size: 0.75rem; opacity: 0.9;">[HR: ${a.hr} | SpO2: ${a.spo2}]</span>` : '';
+                return `
+                    <div style="background: ${cardBg}; border: 1px solid ${borderCol}; border-radius: 8px; padding: 0.5rem 0.75rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: ${glowEffect}; flex-grow: 1; min-width: 260px; max-width: calc(33.333% - 0.5rem);">
+                        <div style="font-size: 1.2rem;">${icon}</div>
+                        <div style="display: flex; flex-direction: column; overflow: hidden; width: 100%;">
+                            <span style="font-size: 0.85rem; font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${typeLabel} ${a.id}: ${a.name}</span>
+                            <span style="font-size: 0.72rem; color: ${subtextCol}; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <b style="color: ${badgeLabelCol};">${a.condition}</b> - <span>${a.symptoms}</span>
+                            </span>
+                            <span style="font-size: 0.72rem; color: #8892b0; margin-top: 2px;">
+                                ETA: <b style="color: #58a6ff;">${a.eta || '15m'}</b> ${vitalsStr}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            container.style.display = 'flex';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
     // Ambulance
     async function fetchAmbulances() {
         try {
             // Use REAL endpoint now
             const res = await axios.get('/api/ambulances_real');
             const amps = res.data;
+            
+            // Filter all active incoming patients (self check-ins, watch alarms, EMS dispatches) for the alert deck
+            const incomingPatients = amps.filter(a => a.patient_id && ["En Route", "Dispatched", "HEADS UP", "RESPONDING", "TRANSPORTING", "ON_SCENE", "ON SCENE"].includes(a.status));
+            updateIncomingAlerts(incomingPatients);
+            
             let text = "";
-            if (amps.length > 0) {
+            const tickerVisits = amps.filter(a => a.patient_id);
+            if (tickerVisits.length > 0) {
                 document.getElementById('ambulance-ticker').style.display = 'block';
                 // Richer Format: ID | TIME | NAME | CONDITION | SYMPTOMS
-                // Richer Format: ID | TIME | NAME | CONDITION | SYMPTOMS
-                text = amps.map(a => {
+                text = tickerVisits.map(a => {
                     let icon = a.display_type === 'AMB' ? '<i class="fa-solid fa-truck-medical" style="color: #ff4444;"></i>' : '<i class="fa-solid fa-car-side" style="color: #60a5fa;"></i>';
                     let typeLabel = a.display_type === 'AMB' ? 'EMS' : 'SELF';
                     let dest = a.destination ? `<span style="background:#22c55e33; padding:2px 5px; border-radius:4px; color:#4ade80; font-size:0.9rem; margin-left:10px;"><i class="fa-solid fa-location-dot"></i> ${a.destination.toUpperCase()}</span>` : '';

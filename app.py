@@ -102,9 +102,41 @@ NURSES = ["Nurse Layla", "Nurse Omar", "Nurse Huda", "Nurse Youssef", "Nurse Joy
 
 # Database-backed arrays and logic used below.
 
+def auto_login_role(role_name):
+    if current_user.is_authenticated:
+        return
+    if role_name == 'patient':
+        p = Patient.query.filter_by(national_id='999999999').first()
+        if not p:
+            p = Patient(national_id='999999999', name='Demo Patient', age=30, gender='M')
+            db.session.add(p)
+            db.session.commit()
+        p.role = 'patient'
+        login_user(p)
+    elif role_name == 'ambulance':
+        u = User.query.filter_by(email='ambulance@resq.ai').first()
+        if not u:
+            u = User(email='ambulance@resq.ai', name='Ambulance Crew', role='ambulance')
+            u.set_password('demo123')
+            db.session.add(u)
+            db.session.commit()
+        login_user(u)
+    elif role_name == 'volunteer':
+        u = User.query.filter_by(email='volunteer@resq.ai').first()
+        if not u:
+            u = User(email='volunteer@resq.ai', name='Volunteer Responder', role='volunteer')
+            u.set_password('demo123')
+            db.session.add(u)
+            db.session.commit()
+        login_user(u)
+    elif role_name == 'superadmin':
+        u = User.query.filter_by(email='admin@resq.ai').first()
+        if u:
+            login_user(u)
+
 @app.route("/ambulance")
-@login_required
 def ambulance_view():
+    auto_login_role('ambulance')
     return render_template("ambulance.html")
 
 @app.route("/settings")
@@ -118,13 +150,13 @@ def drone_tracking():
     return render_template("drone_tracking.html", drones=drones, hospitals=hospitals)
 
 @app.route("/patient")
-@login_required
 def patient_view():
+    auto_login_role('patient')
     return render_template("patient.html")
 
 @app.route("/volunteer")
-@login_required
 def volunteer_view():
+    auto_login_role('volunteer')
     return render_template("volunteer.html")
 
 @app.route("/sign_language")
@@ -132,15 +164,15 @@ def sign_language_view():
     return render_template("sign_language.html")
 
 @app.route("/map")
-@login_required
 def map_view():
+    auto_login_role('superadmin')
     hospitals = [h.to_dict() for h in Hospital.query.all()]
     ambulances = [a.to_dict() for a in Ambulance.query.all()]
     return render_template("map.html", hospitals=hospitals, ambulances=ambulances)
 
 @app.route("/admin")
-@login_required
 def admin_view():
+    auto_login_role('superadmin')
     if current_user.role not in ['superadmin', 'hospitaladmin']:
         flash("Access Denied: You must be a Super Admin or Hospital Admin to view this page.")
         return redirect("/")
@@ -420,10 +452,20 @@ def add_self_patient():
     else:
         pass
         
-    visit = Visit(patient_id=p.national_id, status="En Route", symptoms_text=data.get("symptoms", "CHECK-IN"))
+    eta = data.get("eta", "15")
+    symptoms = data.get("symptoms", "CHECK-IN")
+    symptoms_text = f"ETA:{eta}|{symptoms}"
+    
+    visit = Visit(patient_id=p.national_id, status="En Route", symptoms_text=symptoms_text)
     db.session.add(visit)
     db.session.commit()
-    socketio.emit("new_incoming_self", visit.to_dict())
+    
+    payload = visit.to_dict()
+    payload["patient_name"] = p.name
+    payload["eta"] = eta
+    payload["symptoms"] = symptoms
+    
+    socketio.emit("new_incoming_self", payload)
     return jsonify({"status": "notified", "visit_id": visit.id, "patient_id": p.national_id})
 
 @app.route("/api/ai_consult", methods=["POST"])
@@ -749,9 +791,13 @@ def dispatch_emergency():
         condition = "CODE BLUE"
         hr = 0
     elif source == "crash_sensor":
-        symptoms = "💥 HIGH IMPACT CRASH (5.2g)"
+        symptoms = "💥 HIGH IMPACT DETECTED (Samsung Watch)"
         condition = "TRAUMA ALERT"
         hr = 110
+    elif source == "huawei_watch":
+        symptoms = "🦼 HARD FALL DETECTED (Huawei Watch)"
+        condition = "TRAUMA ALERT"
+        hr = 85
 
     # Get real route ETA from hospital
     route = get_real_route(MAIN_HOSPITAL_COORDS["lat"], MAIN_HOSPITAL_COORDS["lng"], float(lat), float(lng))
@@ -1003,6 +1049,17 @@ def new_ambulance_vitals():
             mission.status = data.get("status", "HEADS UP")
             
         db.session.commit()
+        if mission:
+            entry = {
+                "id": str(mission.id),
+                "name": p.name,
+                "age": p.age or "UNK",
+                "hr": mission.hr,
+                "condition": "HEADS UP",
+                "symptoms": mission.symptoms_text,
+                "arrival_time": "ETA 10m"
+            }
+            socketio.emit('new_emergency', entry)
         return jsonify({"status": "received"})
     return jsonify({"error": "Patient not found"}), 404
 
@@ -1078,10 +1135,10 @@ def arrive_ambulance():
         mission.score = int(ai_risk * 100)
         
     db.session.commit()
+    socketio.emit('queue_update', {'patient_id': amb_id, 'status': 'Waiting'})
         
     return jsonify({"status": "arrived"})
 
-# Override get_ambulances to use real list (MERGED)
 @app.route("/api/ambulances_real")
 def get_ambulances_real():
     display_list = []
@@ -1089,12 +1146,12 @@ def get_ambulances_real():
     # Get all actual ambulances
     ambs = Ambulance.query.all()
     for a in ambs:
-        a_dict = {"id": a.id, "status": a.status, "lat": a.current_lat, "lng": a.current_lng, "unit": a.unit_id, "ETA": f"{random.randint(2, 8)} mins"}
+        a_dict = {"id": a.id, "status": a.status, "lat": a.lat, "lng": a.lng, "unit": a.unit_id, "ETA": f"{random.randint(2, 8)} mins"}
         a_dict["display_type"] = "AMB"
         display_list.append(a_dict)
         
     # Get all active incoming/dispatched visits (Only show on ticker after Handoff)
-    active_statuses = ["HEADS UP"]
+    active_statuses = ["HEADS UP", "En Route", "Dispatched", "RESPONDING", "TRANSPORTING", "ON_SCENE", "ON SCENE"]
     slfs = Visit.query.filter(Visit.status.in_(active_statuses)).all()
     for s in slfs:
         s_display = s.to_dict()
@@ -1106,7 +1163,22 @@ def get_ambulances_real():
         s_display["spo2"] = s.spo2 if s.spo2 else "--"
         s_display["sys_bp"] = s.sys_bp if s.sys_bp else "--"
         s_display["dia_bp"] = s.dia_bp if s.dia_bp else "--"
-        s_display["symptoms"] = s.symptoms_text or s_display.get("symptoms") or "Emergency"
+        
+        # Parse ETA if stored
+        symptoms_clean = s.symptoms_text or ""
+        eta_val = "15m"
+        if symptoms_clean.startswith("ETA:"):
+            parts = symptoms_clean.split("|", 1)
+            if len(parts) == 2:
+                eta_val = parts[0].replace("ETA:", "").strip()
+                if not eta_val.endswith("m"):
+                    eta_val += "m"
+                symptoms_clean = parts[1]
+                
+        s_display["symptoms"] = symptoms_clean or "Emergency"
+        s_display["eta"] = eta_val
+        s_display["arrival_time"] = f"ETA {eta_val}"
+        
         display_list.append(s_display)
         
     return jsonify(display_list)
@@ -1287,8 +1359,10 @@ def triage_patient():
     # User Request: If 100%, MUST be top priority
     if final_risk >= 0.99: final_priority = 3
 
-    # 4. Create Visit with Final Risk/Priority
-    visit = Visit(patient_id=patient_id)
+    # 4. Create or Update Visit with Final Risk/Priority
+    visit = Visit.query.filter_by(patient_id=patient_id).filter(Visit.status.in_(["En Route", "Dispatched", "HEADS UP", "RESPONDING", "TRANSPORTING"])).order_by(Visit.id.desc()).first()
+    if not visit:
+        visit = Visit(patient_id=patient_id)
     visit.hospital_id = data.get("hospital_id", 1)
     visit.priority = final_priority
     visit.score = int(final_risk * 100)
@@ -1312,6 +1386,7 @@ def triage_patient():
     
     db.session.add(visit)
     db.session.commit()
+    socketio.emit('queue_update', {'patient_id': patient_id, 'status': 'Waiting'})
 
     # Create response entry (from DB obj to ensure consistency)
     patient_entry = {
