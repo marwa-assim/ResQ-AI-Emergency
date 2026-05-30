@@ -6,7 +6,7 @@ from db_models import User, Patient, Hospital, Ambulance, RolePolicy, IoTDevice,
 from auth import auth_bp
 from ai_copilot import copilot
 from location_service import haversine_distance, calculate_eta, MAIN_HOSPITAL_COORDS, get_real_route
-from flask_login import LoginManager, current_user, login_required
+from flask_login import LoginManager, current_user, login_required, login_user
 import time
 import random
 import os
