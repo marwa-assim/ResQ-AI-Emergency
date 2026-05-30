@@ -1546,6 +1546,7 @@
       draw() {
         this.ctx.clearRect(0, 0, this.width, this.height);
         
+        // Background cybernetic grid lines
         this.ctx.strokeStyle = 'rgba(234, 179, 8, 0.02)';
         this.ctx.lineWidth = 1;
         for (let i = 20; i < this.width; i += 20) {
@@ -1560,76 +1561,120 @@
         this.ctx.shadowBlur = 10;
         this.ctx.shadowColor = '#eab308';
         
-        this.ctx.strokeStyle = '#475569';
-        this.ctx.lineWidth = 4;
+        // 1. Neck (Skin tone)
+        this.ctx.fillStyle = '#ffe4e6';
         this.ctx.beginPath();
-        this.ctx.moveTo(40, 180);
-        this.ctx.quadraticCurveTo(40, 110, 75, 95);
+        this.ctx.rect(98, 70, 24, 25);
+        this.ctx.fill();
+
+        // 2. Torso (Medical Scrubs Uniform)
+        this.ctx.fillStyle = '#1e293b'; // Slate/dark gray scrubs
+        this.ctx.beginPath();
+        this.ctx.moveTo(30, 190);
+        this.ctx.lineTo(75, 95);
         this.ctx.lineTo(145, 95);
-        this.ctx.quadraticCurveTo(180, 110, 180, 180);
+        this.ctx.lineTo(190, 190);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Scrubs V-Neck Collar
+        this.ctx.strokeStyle = '#06b6d4'; // Teal/cyan scrubs trim
+        this.ctx.lineWidth = 3.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(92, 95);
+        this.ctx.lineTo(110, 118);
+        this.ctx.lineTo(128, 95);
         this.ctx.stroke();
 
-        this.ctx.strokeStyle = '#eab308';
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.moveTo(100, 95); this.ctx.lineTo(100, 75);
-        this.ctx.moveTo(120, 95); this.ctx.lineTo(120, 75);
-        this.ctx.stroke();
+        // 3. Face (Skin tone)
+        this.ctx.fillStyle = '#ffe4e6';
         this.ctx.beginPath();
         this.ctx.arc(this.headCenter.x, this.headCenter.y, this.headRadius, 0, Math.PI * 2);
-        this.ctx.stroke();
+        this.ctx.fill();
 
-        this.ctx.shadowBlur = 0;
-        this.ctx.fillStyle = '#eab308';
+        // 4. Hair (Modern styled hair and bun)
+        this.ctx.fillStyle = '#334155'; // Dark hair
+        this.ctx.beginPath();
+        // Hair cap on top of head
+        this.ctx.arc(this.headCenter.x, this.headCenter.y - 4, this.headRadius + 0.8, Math.PI, 2 * Math.PI);
+        // Bun
+        this.ctx.arc(this.headCenter.x, this.headCenter.y - 23, 7.5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // 5. Facial Features (Eyes & Mouth)
+        this.ctx.shadowBlur = 0; // Turn off glow for eyes/mouth
+        this.ctx.fillStyle = '#0f172a';
         const isBlinking = Math.sin(this.tick * 0.05) > 0.95;
         
         if (isBlinking) {
-          this.ctx.strokeStyle = '#eab308';
+          this.ctx.strokeStyle = '#0f172a';
           this.ctx.lineWidth = 2;
           this.ctx.beginPath();
-          this.ctx.moveTo(99, 48); this.ctx.lineTo(103, 48);
-          this.ctx.moveTo(117, 48); this.ctx.lineTo(121, 48);
+          this.ctx.moveTo(98, 48); this.ctx.lineTo(104, 48);
+          this.ctx.moveTo(116, 48); this.ctx.lineTo(122, 48);
           this.ctx.stroke();
         } else {
           this.ctx.beginPath();
-          this.ctx.arc(101, 48, 2, 0, Math.PI * 2);
-          this.ctx.arc(119, 48, 2, 0, Math.PI * 2);
+          this.ctx.arc(101, 48, 2.2, 0, Math.PI * 2);
+          this.ctx.arc(119, 48, 2.2, 0, Math.PI * 2);
           this.ctx.fill();
         }
         
-        this.ctx.strokeStyle = '#eab308';
+        this.ctx.strokeStyle = '#0f172a';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         const mouthWiggle = Math.sin(this.tick * 0.1) * 1.5;
-        this.ctx.arc(110, 58 + mouthWiggle * 0.2, 5, 0.2, Math.PI - 0.2);
+        this.ctx.arc(110, 58 + mouthWiggle * 0.2, 4, 0.2, Math.PI - 0.2);
         this.ctx.stroke();
 
-        this.ctx.shadowBlur = 12;
-        this.ctx.shadowColor = '#eab308';
-        this.ctx.lineWidth = 5.5;
+        // 6. Arms (Scrubs Sleeves + Skin Forearms)
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowColor = '#ffe4e6';
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
 
+        // LEFT ARM kinematics positions
         const lSE = this.getJointPosition(this.lShoulderPos, this.joints.lShoulder.angle, this.armLength, -1);
         const lEW = this.getJointPosition(lSE, this.joints.lShoulder.angle + this.joints.lElbow.angle, this.forearmLength, -1);
-        this.ctx.strokeStyle = '#06b6d4';
-        this.ctx.shadowColor = '#06b6d4';
+        
+        // Left Upper sleeve (Teal/scrubs blue)
+        this.ctx.strokeStyle = '#1e293b';
+        this.ctx.lineWidth = 14;
         this.ctx.beginPath();
         this.ctx.moveTo(this.lShoulderPos.x, this.lShoulderPos.y);
         this.ctx.lineTo(lSE.x, lSE.y);
+        this.ctx.stroke();
+        // Left Forearm (Skin tone)
+        this.ctx.strokeStyle = '#ffe4e6';
+        this.ctx.lineWidth = 9.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(lSE.x, lSE.y);
         this.ctx.lineTo(lEW.x, lEW.y);
         this.ctx.stroke();
+        
+        // Left Hand Shape
         this.drawHand(lEW, this.joints.lShoulder.angle + this.joints.lElbow.angle, this.handShapes.left.target, -1);
 
+        // RIGHT ARM
         const rSE = this.getJointPosition(this.rShoulderPos, this.joints.rShoulder.angle, this.armLength, 1);
         const rEW = this.getJointPosition(rSE, this.joints.rShoulder.angle - this.joints.rElbow.angle, this.forearmLength, 1);
-        this.ctx.strokeStyle = '#eab308';
-        this.ctx.shadowColor = '#eab308';
+        
+        // Right Upper sleeve (Teal/scrubs blue)
+        this.ctx.strokeStyle = '#1e293b';
+        this.ctx.lineWidth = 14;
         this.ctx.beginPath();
         this.ctx.moveTo(this.rShoulderPos.x, this.rShoulderPos.y);
         this.ctx.lineTo(rSE.x, rSE.y);
+        this.ctx.stroke();
+        // Right Forearm (Skin tone)
+        this.ctx.strokeStyle = '#ffe4e6';
+        this.ctx.lineWidth = 9.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(rSE.x, rSE.y);
         this.ctx.lineTo(rEW.x, rEW.y);
         this.ctx.stroke();
+        
+        // Right Hand Shape
         this.drawHand(rEW, this.joints.rShoulder.angle - this.joints.rElbow.angle, this.handShapes.right.target, 1);
       }
 
@@ -1646,30 +1691,46 @@
         this.ctx.translate(wristPos.x, wristPos.y);
         this.ctx.rotate(Math.PI/2 + (dir * armAngle));
         this.ctx.lineWidth = 3.5;
+        this.ctx.strokeStyle = '#ffe4e6';
+        this.ctx.fillStyle = '#ffe4e6';
 
         this.ctx.beginPath();
         if (shape === 'open') {
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(0, -12);
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(-6, -11);
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(6, -11);
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(-12, -7);
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(12, -7);
+          // Palm + spread fingers
+          this.ctx.arc(0, -2, 5, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.beginPath();
+          this.ctx.moveTo(0, -2); this.ctx.lineTo(0, -14);
+          this.ctx.moveTo(-2, -2); this.ctx.lineTo(-5, -12);
+          this.ctx.moveTo(2, -2); this.ctx.lineTo(5, -12);
+          this.ctx.moveTo(-4, -2); this.ctx.lineTo(-9, -8);
+          this.ctx.moveTo(4, -2); this.ctx.lineTo(9, -8);
+          this.ctx.stroke();
         } else if (shape === 'fist') {
-          this.ctx.arc(0, -4, 6, 0, Math.PI * 2);
+          this.ctx.arc(0, -4, 7, 0, Math.PI * 2);
+          this.ctx.fill();
         } else if (shape === 'curved') {
-          this.ctx.arc(0, -5, 7, -Math.PI/3, Math.PI + Math.PI/3);
+          this.ctx.arc(0, -5, 8, -Math.PI/3, Math.PI + Math.PI/3);
+          this.ctx.stroke();
         } else if (shape === 'point') {
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(0, -14);
-          this.ctx.arc(-2, -2, 4, 0, Math.PI * 2);
+          // Palm + pointing index
+          this.ctx.arc(0, -2, 5, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.beginPath();
+          this.ctx.moveTo(0, -2); this.ctx.lineTo(0, -15);
+          this.ctx.stroke();
         } else if (shape === 'phone') {
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(-11, -8);
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(11, -8);
-          this.ctx.arc(0, -2, 4, 0, Math.PI * 2);
-        } else {
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(-2, -9);
-          this.ctx.moveTo(0, 0); this.ctx.lineTo(2, -9);
+          // Palm + extended thumb/pinky
+          this.ctx.arc(0, -2, 5, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.beginPath();
+          this.ctx.moveTo(-2, -2); this.ctx.lineTo(-12, -9);
+          this.ctx.moveTo(2, -2); this.ctx.lineTo(12, -9);
+          this.ctx.stroke();
+        } else { // relaxed
+          this.ctx.arc(0, -3, 6, 0, Math.PI * 2);
+          this.ctx.fill();
         }
-        this.ctx.stroke();
         this.ctx.restore();
       }
 
