@@ -109,10 +109,14 @@ def train():
     preds = np.argmax(logits.asnumpy(), axis=1)
     
     acc = np.mean(preds == y_test)
+    top2_acc = np.mean(np.abs(preds - y_test) <= 1)
+    bin_acc = np.mean((preds < 2).astype(int) == (y_test < 2).astype(int))
     from sklearn.metrics import classification_report
     report = classification_report(y_test, preds, output_dict=True, zero_division=0)
     
-    print(f"Accuracy: {acc:.2%}")
+    print(f"Exact ESI 5-Class Accuracy: {acc:.2%}")
+    print(f"Top-2 Triage Accuracy (Within 1 ESI Level): {top2_acc:.2%}")
+    print(f"High-Urgency Detection Accuracy (Critical vs Stable): {bin_acc:.2%}")
     print(f"Precision (Macro): {report['macro avg']['precision']:.2f}")
     print(f"Recall (Macro): {report['macro avg']['recall']:.2f}")
     print(f"F1 Score (Macro): {report['macro avg']['f1-score']:.2f}")
