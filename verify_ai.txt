@@ -1,3 +1,0 @@
-Real AI Model Loaded: MIMIC-IV-ED Centroid Classifier
-SentenceTransformers not installed yet.
-App Import Successful
