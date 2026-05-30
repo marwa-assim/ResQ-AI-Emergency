@@ -2029,16 +2029,16 @@
         this.renderProStep();
       }
 
-      startLocal(key) {
+      startLocal(key, introPrefix = '') {
         const proto = this.ILLUSTRATED_PROTOCOLS[key];
         if (!proto) return;
         this.currentProtocol = proto;
         this.currentStepIdx = 0;
         this.active = true;
-        this.renderProStep();
+        this.renderProStep(introPrefix);
       }
 
-      renderProStep() {
+      renderProStep(introPrefix = '') {
         this.currentStepId = 'step_' + this.currentStepIdx; // legacy compat
         const proto = this.currentProtocol;
         const steps = proto.steps;
@@ -2128,7 +2128,7 @@
             const stepTextStr = textEl ? textEl.innerText.trim() : step.text;
             const stepDetailStr = detailEl ? detailEl.innerText.trim() : (step.detail || '');
 
-            voice.speak(`${stepCountStr}. ${stepTextStr}. ${stepDetailStr}`, true);
+            voice.speak(introPrefix + `${stepCountStr}. ${stepTextStr}. ${stepDetailStr}`, true);
           }, 450);
         }
 
@@ -2285,12 +2285,11 @@
 
       const key = resq.detectProtocol(query);
       if (key) {
-        resq.startLocal(key);
         const title = resq.ILLUSTRATED_PROTOCOLS[key].title;
+        resq.startLocal(key, 'Starting ' + title + '. ');
         const msg = `I'm activating the <strong>${title}</strong> - follow the illustrated steps below. Say <em>"next"</em> to advance.`;
         _appendBubble('nurse', msg);
         _chatHistory.push({ role:'nurse', content: 'Activating ' + title });
-        if (voice) voice.speak('Starting ' + title + '. Follow the steps shown.');
         return;
       }
 
