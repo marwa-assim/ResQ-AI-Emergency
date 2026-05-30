@@ -415,10 +415,10 @@ def add_self_patient():
     national_id = data.get("national_id") or f"TEMP-{random.randint(1000,9999)}"
     p = Patient.query.get(national_id)
     if not p:
-        p = Patient(national_id=national_id, name=data.get("name", "Unknown Patient"), status="En Route to Hospital")
+        p = Patient(national_id=national_id, name=data.get("name", "Unknown Patient"))
         db.session.add(p)
     else:
-        p.status = "En Route to Hospital"
+        pass
         
     visit = Visit(patient_id=p.national_id, status="En Route", symptoms_text=data.get("symptoms", "CHECK-IN"))
     db.session.add(visit)
@@ -433,9 +433,9 @@ def ai_consult():
     patient_id = data.get("patient_id")
     priority = 1
     if patient_id:
-        p = Patient.query.get(patient_id)
-        if p:
-            priority = p.priority
+        v = Visit.query.filter_by(patient_id=patient_id).order_by(Visit.id.desc()).first()
+        if v:
+            priority = v.priority
     plan = copilot.generate_plan(text, priority, language=data.get("language", "en"))
     return jsonify(plan)
 
@@ -1070,12 +1070,6 @@ def arrive_ambulance():
         final_priority = 3
         ai_risk = max(ai_risk, 0.9)
     
-    p.priority = final_priority
-    p.score = int(ai_risk * 100)
-        
-    # Ensure status is Waiting so they show up in ER Queue!
-    p.status = "Waiting"
-    
     # Update mission status to Waiting so they appear on dashboard ER Queue
     mission = Visit.query.filter_by(patient_id=amb_id).order_by(Visit.id.desc()).first()
     if mission:
@@ -1547,21 +1541,22 @@ def get_stats():
 
 @app.route("/api/ambulances")
 def get_ambulances():
-    # Return REAL stateful ambulances (Patients with status != Waiting/Treated)
-    # Actually, we treat 'Dispatched' or 'En Route' as active ambulances
-    active = Patient.query.filter(Patient.status.in_(['Dispatched', 'En Route', 'Transporting'])).all()
+    # Return REAL stateful ambulances (Visits with status in active statuses)
+    active_visits = Visit.query.filter(Visit.status.in_(['Dispatched', 'En Route', 'Transporting'])).all()
     
     output = []
-    for p in active:
+    for v in active_visits:
+        p = Patient.query.filter_by(national_id=str(v.patient_id)).first()
+        name = p.name if p else "Unknown Patient"
         output.append({
-            "id": p.id,
-            "name": p.name,
-            "status": p.status,
+            "id": v.id,
+            "name": name,
+            "status": v.status,
             "arrival_time": "ETA 8m",
             "display_type": "AMB",
-            "condition": "Critical" if p.priority == 3 else "Stable",
+            "condition": "Critical" if v.priority == 3 else "Stable",
              # Keeping static parameters for UI visual compatibility if keys are missing.
-            "symptoms": "Emergency Response",
+            "symptoms": v.symptoms_text or "Emergency Response",
             "destination": "Trauma Center"
         })
     return jsonify(output)

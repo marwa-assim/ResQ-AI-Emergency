@@ -473,7 +473,7 @@
     <button id="btn-sign-mode" onclick="window.location.href='/sign_language'" class="floating-btn" aria-label="Sign Language Mode"
       title="Sign Language - talk to AI with your hands"
       style="background:rgba(56,189,248,0.12); border-color:#38bdf8; font-size:1.3rem;">
-      🤟
+      <i class="fa-solid fa-sign-language"></i>
     </button>
   </div>
 
@@ -833,7 +833,7 @@
         </button>
         <!-- Sign Language toggle -->
         <button id="sl-inline-btn" onclick="window.location.href='/sign_language'" title="Open Sign Language Page"
-          style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--accent-cyan);font-size:1.4rem;cursor:pointer;opacity:0.8;transition:all 0.2s;">🤟</button>
+          style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--accent-cyan);font-size:1.4rem;cursor:pointer;opacity:0.8;transition:all 0.2s;"><i class="fa-solid fa-sign-language"></i></button>
       </div>
       <div id="guide-container"></div>
     </div>
@@ -1320,6 +1320,8 @@
         this.recognition = null;
         this.isBlindMode = false;
         this.isListening = false;
+        this.isSpeaking = false;
+        this.isDictating = false;
 
         if ('webkitSpeechRecognition' in window) {
           this.recognition = new webkitSpeechRecognition();
@@ -1331,17 +1333,25 @@
           this.recognition.onspeechstart = () => {
               if (this.synth.speaking) {
                   this.synth.cancel();
+                  this.isSpeaking = false;
                   console.log("Interrupted AI Voice");
               }
           };
 
           this.recognition.onresult = (event) => {
+            if (this.isSpeaking) {
+              console.log("Ignoring voice command while synthesis is speaking/ending.");
+              return;
+            }
             const last = event.results.length - 1;
             const command = event.results[last][0].transcript.trim().toLowerCase();
             console.log("Voice Command:", command);
             
             // Stop speaking if speech results arrive (backup to onspeechstart)
-            if (this.synth.speaking) this.synth.cancel();
+            if (this.synth.speaking) {
+              this.synth.cancel();
+              this.isSpeaking = false;
+            }
 
             this.processCommand(command);
           };
@@ -1408,16 +1418,25 @@
       }
 
       toggleDictation() {
-        if (this.isListening && this.isDictating) {
-          this.recognition.stop();
+        if (!this.recognition) { alert("Browser does not support Voice."); return; }
+        const inp = document.getElementById('ai-text-input');
+        
+        if (this.isListening) {
+          try { this.recognition.stop(); } catch(e) {}
+          this.isListening = false;
           this.isDictating = false;
+          if (inp) { inp.placeholder = "Ask any medical question or describe emergency..."; }
+          this.speak_visuals(false);
         } else {
-          this.recognition.start();
           this.isListening = true;
           this.isDictating = true;
-          // Update Nurse Input Icon
-          const inp = document.getElementById('ai-text-input');
           if (inp) { inp.placeholder = "Listening..."; inp.focus(); }
+          this.speak_visuals(true);
+          try {
+            this.recognition.start();
+          } catch(e) {
+            console.log("Error starting recognition:", e);
+          }
         }
       }
 
@@ -1426,21 +1445,49 @@
         const btn = document.getElementById('btn-mic-mode');
 
         if (this.isListening) {
-          this.recognition.stop();
+          try { this.recognition.stop(); } catch(e) {}
           this.isListening = false;
+          this.isDictating = false;
           btn.style.background = "rgba(255,255,255,0.1)";
           btn.classList.remove('pulse-mic');
         } else {
-          this.recognition.start();
           this.isListening = true;
+          this.isDictating = false;
           btn.style.background = "#ef4444"; // Red (Recording)
           btn.classList.add('pulse-mic');
+          try {
+            this.recognition.start();
+          } catch(e) {
+            console.log("Error starting recognition:", e);
+          }
           this.speak("Listening for commands.");
         }
       }
 
-
       processCommand(cmd) {
+        if (!cmd) return;
+        console.log("[ResQVoice] Processing command/dictation:", cmd);
+
+        // Always write the query/dictation to the chat input so the user gets visual feedback
+        const inp = document.getElementById('ai-text-input');
+        if (inp) {
+          inp.value = cmd;
+        }
+
+        // If in dictation mode (user clicked the input mic)
+        if (this.isDictating) {
+          if (typeof searchFirstAid === 'function') {
+            searchFirstAid(cmd);
+          }
+          this.isDictating = false;
+          this.isListening = false;
+          this.wasListening = false;
+          try { this.recognition.stop(); } catch(e) {}
+          this.speak_visuals(false);
+          if (inp) { inp.placeholder = "Ask any medical question or describe emergency..."; }
+          return;
+        }
+
         // ── Navigation while protocol is active ──
         if (resq && resq.active) {
           if (cmd.match(/next|ok|done|continue|yes|yep|yeah|ready|go/)) { resq.handleVoice("next"); return; }
@@ -1448,11 +1495,17 @@
           if (cmd.match(/repeat|again|what|pardon/)) { resq.handleVoice("repeat"); return; }
           if (cmd.match(/stop|end|exit|cancel|quit/)) { resq.stop(); return; }
           
-          // USER INTERRUPTED WITH A CONVERSATIONAL QUESTION!
-          // Stop the protocol and send to real LLM just like ChatGPT.
-          resq.stop();
-          if (this.synth.speaking) this.synth.cancel();
-          if (typeof searchFirstAid === 'function') searchFirstAid(cmd);
+          // Switch protocol if they mention a known emergency word
+          const keys = ['cpr', 'bleed', 'chok', 'burn', 'strok', 'seiz', 'allerg'];
+          if (keys.some(k => cmd.includes(k))) {
+             resq.stop();
+             if (this.synth.speaking) this.synth.cancel();
+             if (typeof searchFirstAid === 'function') searchFirstAid(cmd);
+             return;
+          }
+          
+          // Otherwise, ignore background noise or other words to avoid disrupting the guide
+          console.log("Ignoring non-command voice input during active protocol:", cmd);
           return;
         }
 
@@ -1462,19 +1515,8 @@
           return;
         }
 
-        // ── Dictation or continuous voice chat ──
-        if (this.isDictating) {
-          const inp = document.getElementById('ai-text-input');
-          if (inp) { inp.value = cmd; }
-          if (typeof searchFirstAid === 'function') searchFirstAid(cmd);
-          this.isDictating = false;
-          try { this.recognition.stop(); } catch(e) {}
-          return;
-        }
-
-        // ── True Conversational AI (Real LLM fallback) ──
+        // ── Fallback Chat Response ──
         if (typeof searchFirstAid === 'function') {
-           // Instead of just relying on regex, we send ALL speech to the AI nurse
            searchFirstAid(cmd);
         }
       }
@@ -1519,6 +1561,7 @@
       stop() {
         this.synth.cancel();
         window.utterances = [];
+        this.isSpeaking = false; // Reset synthesis lock
         if (typeof resq !== 'undefined' && resq && resq.active) resq.stop();
         this.speak_visuals(false);
         if (this.wasListening && !this.isListening) {
@@ -1623,9 +1666,11 @@
         let cleanText = text ? text.replace(/[\uD800-\uDFFF]|[\u2600-\u27BF]/g, '').replace(/\s+/g, ' ').trim() : '';
         if (!cleanText) return;
 
+        this.isSpeaking = true; // Lock voice recognition during speech synthesis
+
         // 1. PAUSE LISTENING (Prevent Echo)
         if (this.isListening) {
-          this.recognition.stop();
+          try { this.recognition.stop(); } catch(e) {}
           this.wasListening = true;
         }
 
@@ -1668,16 +1713,19 @@
 
         // 2. RESUME LISTENING (The "Handshake")
         const resumeMic = () => {
-          if (this.wasListening || resq.active) {
-            try {
-              this.recognition.start();
-              this.isListening = true;
-              this.speak_visuals(true);
-              resq.playPing(); // AUDITORY CUE: "I'm listening now"
-            } catch (e) {
-              if (e.name !== 'InvalidStateError') console.log("Mic restart error", e);
+          setTimeout(() => {
+            this.isSpeaking = false; // Unlock voice recognition
+            if (this.wasListening || (resq && resq.active)) {
+              try {
+                this.recognition.start();
+                this.isListening = true;
+                this.speak_visuals(true);
+                if (resq && typeof resq.playPing === 'function') resq.playPing(); // AUDITORY CUE
+              } catch (e) {
+                if (e.name !== 'InvalidStateError') console.log("Mic restart error", e);
+              }
             }
-          }
+          }, 600);
         };
 
         utter.onend = () => {
@@ -1817,14 +1865,14 @@
           const img1 = getSrc(src[0]);
           const img2 = getSrc(src[1]);
           return `
-            <div class="flipbook-container${anim?' '+anim:''}" style="position:relative; width:100%; height:180px; max-width:320px; margin:0 auto; overflow:hidden; border-radius:16px; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));">
+            <div class="flipbook-container${anim?' '+anim:''}" style="position:relative; width:100%; height:220px; max-width:100%; margin:0 auto; overflow:hidden; border-radius:16px; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4)); border:2px solid rgba(255,255,255,0.12); box-shadow:0 8px 32px rgba(0,0,0,0.4);">
               <img src="${img1}" alt="frame1" class="flipbook-frame frame-a" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;" onerror="this.style.display='none'">
               <img src="${img2}" alt="frame2" class="flipbook-frame frame-b" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;" onerror="this.style.display='none'">
             </div>
           `;
         }
         const imgSrc = getSrc(src);
-        return `<img src="${imgSrc}" alt="procedure" class="proc-photo${anim?' '+anim:''}" style="width:100%; max-height:180px; object-fit:contain; border-radius:16px; margin:0 auto; display:block; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));" onerror="this.style.display='none'">`;
+        return `<img src="${imgSrc}" alt="procedure" class="proc-photo${anim?' '+anim:''}" style="width:100%; max-height:250px; object-fit:contain; border-radius:16px; margin:0 auto; display:block; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));" onerror="this.style.display='none'">`;
       }
 
       get ILLUSTRATED_PROTOCOLS() {
@@ -1833,7 +1881,7 @@
 
         // Inline SVGs for warnings
         const seizureMouthWarningSvg = `
-          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:320px; display:block; margin:0 auto;">
+          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:100%; display:block; margin:0 auto;">
             <defs>
               <filter id="glow-red-mouth" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="6" result="blur" />
@@ -1856,7 +1904,7 @@
         `;
 
         const burnBlisterWarningSvg = `
-          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:320px; display:block; margin:0 auto;">
+          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:100%; display:block; margin:0 auto;">
             <defs>
               <filter id="glow-red-blister" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="6" result="blur" />
@@ -1877,7 +1925,7 @@
         `;
 
         const emergencyCallSvg = `
-          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:320px; display:block; margin:0 auto;">
+          <svg viewBox="0 0 200 200" width="100%" height="180" style="max-width:100%; display:block; margin:0 auto;">
             <defs>
               <filter id="glow-green-call" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="5" result="blur" />
@@ -2347,8 +2395,8 @@
       @keyframes breathe { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.04);opacity:0.85;} }
       @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0);} 60%{box-shadow:0 0 0 10px rgba(239,68,68,0.3);} }
       @keyframes waterFlow { 0%{filter:hue-rotate(0deg) brightness(1);} 50%{filter:hue-rotate(20deg) brightness(1.1);} 100%{filter:hue-rotate(0deg) brightness(1);} }
-      .proto-svg { width:160px; height:130px; border-radius:16px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); padding:8px; }
-      .proc-photo { width:220px; height:160px; object-fit:cover; border-radius:16px; border:2px solid rgba(255,255,255,0.12); box-shadow:0 8px 32px rgba(0,0,0,0.4); display:block; }
+      .proto-svg { width:100%; max-width:100%; height:auto; max-height:220px; border-radius:16px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); padding:8px; display:block; margin:0 auto; }
+      .proc-photo { width:100%; max-width:100%; height:auto; max-height:250px; object-fit:contain; border-radius:16px; border:2px solid rgba(255,255,255,0.12); box-shadow:0 8px 32px rgba(0,0,0,0.4); display:block; margin:0 auto; }
       .anim-compress { animation:compress 0.55s ease-in-out infinite; transform-origin:center bottom; }
       .anim-breathe  { animation:breathe 2s ease-in-out infinite; }
       .anim-pulse    { animation:pulse 1.5s ease-in-out infinite; }
