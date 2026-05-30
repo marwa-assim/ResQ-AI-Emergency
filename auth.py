@@ -45,38 +45,8 @@ def login():
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if current_user.is_authenticated:
-        return redirect_by_role(getattr(current_user, 'role', 'patient'))
-
-    if request.method == 'POST':
-        identifier = request.form.get('email') # Email or CPR
-        name = request.form.get('name')
-        password = request.form.get('password')
-        role = request.form.get('role', 'patient')
-        
-        if role == 'patient':
-            if Patient.query.filter_by(national_id=identifier).first():
-                flash('National ID already exists')
-                return redirect(url_for('auth.signup'))
-            new_user = Patient(national_id=identifier, name=name)
-            new_user.set_password(password)
-            db.session.add(new_user)
-            db.session.commit()
-            new_user.role = 'patient'
-            login_user(new_user)
-            return redirect_by_role('patient')
-        else:
-            if User.query.filter_by(email=identifier).first(): 
-                flash('Email address already exists')
-                return redirect(url_for('auth.signup'))
-            new_user = User(email=identifier, name=name, role=role.lower())
-            new_user.set_password(password)
-            db.session.add(new_user)
-            db.session.commit()
-            login_user(new_user)
-            return redirect_by_role(new_user.role)
-
-    return render_template('signup.html')
+    flash('Registration is disabled for this demonstration. Please sign in using pre-configured credentials.')
+    return redirect(url_for('auth.login'))
 
 @auth_bp.route('/logout')
 @login_required
