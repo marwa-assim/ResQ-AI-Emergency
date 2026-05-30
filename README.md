@@ -1,335 +1,117 @@
-# 🚑 ResQ AI - Emergency Triage & Response System
+# ResQ AI: Emergency Triage and Response System
 
-<div align="center">
+ResQ AI is an emergency response platform designed to optimize emergency dispatch and triage. The system uses a machine learning model implemented in MindSpore to classify emergency severity and prioritize care. It bridges communication between patients, ambulance crews, volunteers, and hospital administrators in real-time.
 
-![ResQ AI Banner](https://img.shields.io/badge/ResQ-AI%20Emergency-red?style=for-the-badge&logo=heart&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.9-blue?style=flat-square&logo=python)
-![Flask](https://img.shields.io/badge/Flask-3.1-lightgrey?style=flat-square&logo=flask)
-![MindSpore](https://img.shields.io/badge/MindSpore-2.3.0-red?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+## Key Features
 
-An AI-powered emergency triage and response platform that bridges the gap between patients and emergency services using real-time AI, sign language recognition, multilingual support, and mesh networking.
+1. AI Triage: A neural network trained on over 80,000 emergency room records from the MIMIC-IV-ED dataset. It automatically triages patients into priority levels (1 to 5) based on vital signs and symptoms.
+2. AI First Aid Assistant: A conversational AI assistant that provides step-by-step, voice-guided first aid instructions based on the patient's condition.
+3. Sign Language Recognition: A camera-based input system using MediaPipe to recognize ASL hand shapes, allowing deaf or mute patients to trigger emergency alerts.
+4. Multilingual Translation: Instant UI translation into 15 languages, with matching voice-guided first aid instructions in the selected language.
+5. Real-Time Routing: Direct road routing and turn-by-turn navigation for ambulance drivers and volunteers, powered by the Open Source Routing Machine (OSRM).
+6. Local Mesh Networking: A peer-to-peer WebRTC communication network that allows emergency responders to coordinate local operations even if internet access is down.
+7. Wearable Integration: An API that registers data from health sensors and smartwatches to automatically trigger dispatches when critical vitals or falls are detected.
 
-</div>
+## System Architecture
 
----
+The platform is built as a modular application:
+- Patient Portal: For symptom reporting, tracking dispatch, and viewing first aid instructions.
+- Ambulance Portal: For crews to accept tasks and navigate to the patient and hospital.
+- Volunteer Portal: For local registered first responders to receive nearby alerts.
+- Admin Dashboard: For hospital staff to monitor queue states, assign beds, and coordinate responses.
+- Sign Language Interface: For deaf users to communicate emergency needs.
+- Mesh Network: For off-grid peer-to-peer text and command communication.
 
- Table of Contents
+## Installation and Redeployment Steps
 
-1. [Overview](#-overview)
-2. [Key Features](#-key-features)
-3. [System Architecture](#-system-architecture)
-4. [Prerequisites](#-prerequisites)
-5. [Installation](#-installation)
-6. [Configuration](#-configuration)
-7. [Running the Application](#-running-the-application)
-8. [Feature Walkthrough](#-feature-walkthrough)
-9. [AI Model — MindSpore](#-ai-model--mindspore)
-10. [Wearable Integration](#-wearable-integration)
-11. [Deployment to Cloud](#-deployment-to-cloud)
-12. [Technology Stack](#-technology-stack)
+Follow these steps to run the system locally for evaluation and testing.
 
----
+### Prerequisites
 
- Overview
+- Python 3.9 (Required: MindSpore is only compatible with Python 3.9 on Windows/Linux).
+- Git.
+- A Gemini API Key (Required for the conversational AI assistant. You can get one for free at aistudio.google.com).
 
-ResQ AI is a full-stack emergency response platform designed to reduce emergency response times and improve patient outcomes. It uses Huawei MindSpore to run a neural network trained on **80,000+ real hospital records** from the MIMIC-IV-ED dataset to automatically triage patients by priority level (ESI 1–5).
+### Step 1: Clone or Unzip the Code
 
-The platform connects four groups in real time:
-- Patients** — report symptoms, receive AI-guided first aid, dispatch ambulances
-- Ambulance crews** — receive patient GPS, get turn-by-turn OSRM routing
-- Volunteers** — receive nearby emergency alerts, navigate to patient
-- Administrators** — monitor all active cases on a live dashboard
-
----
-
- Key Features
-
-| Feature | Description |
-| AI Triage (MindSpore)** | Neural network trained on MIMIC-IV-ED data classifies emergencies Priority 1–5 |
-| Nurse Sara AI Assistant** | Gemini-powered conversational AI gives real-time first aid guidance |
-| Sign Language Recognition** | MediaPipe Hands detects ASL gestures for deaf patients |
-| 15-Language Translation** | Full UI translation via Google Translate widget |
-| Real-Time OSRM Routing** | Turn-by-turn directions for ambulances and volunteers |
-| WebRTC Mesh Network** | Peer-to-peer communication between responders — works without internet |
-| Wearable Integration** | Huawei Health Kit endpoint auto-dispatches on critical vitals |
-| Mobile Responsive** | Fully accessible on phones over WiFi |
-| Multilingual Voice** | Nurse Sara speaks in the user's selected language |
-
----
-
- System Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌───────────────┐
-│   Patient   │────▶│  Flask API  │────▶│  MindSpore    │
-│   Portal    │     │  (app.py)   │     │  Triage Model │
-└─────────────┘     └──────┬──────┘     └───────────────┘
-                           │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-  │  Ambulance   │  │  Volunteer   │  │    Admin     │
-  │   Portal     │  │   Portal     │  │  Dashboard   │
-  └──────────────┘  └──────────────┘  └──────────────┘
-          │                │
-          └────────────────┘
-               OSRM Routing
-```
-
----
-
-Prerequisites
-
-Before installing, ensure you have the following:
-
-| Requirement | Version | Download |
-|---|---|---|
-| **Python** | 3.9.x | [python.org](https://www.python.org/downloads/release/python-390/) |
-| **pip** | Latest | Included with Python |
-| **Git** | Any | [git-scm.com](https://git-scm.com) |
-| **Google Chrome / Edge** | Latest | For best camera/GPS support |
-| **Gemini API Key** | Free | [aistudio.google.com](https://aistudio.google.com/app/apikey) |
-
-> ⚠️ **Python 3.9 is required** — MindSpore 2.3.0 does not support Python 3.10+
-
----
-
- Installation
-
-The app can be downloaded from the ZIF file code and unzip it then run it as a local server on the PC or the laptop, or download it from GitHub by following the below steps:
-
-Step 1 — Clone the Repository
-
+Clone the repository from GitHub:
 ```bash
 git clone https://github.com/marwa-assim/ResQ-AI-Emergency.git
 cd ResQ-AI-Emergency
 ```
+Or extract the provided ZIP file and open a terminal in the root directory.
 
-Step 2 — Create a Virtual Environment (Recommended)
+### Step 2: Create a Virtual Environment
 
-**Windows:**
-```bash
-python -m venv venv
-venv\Scripts\activate
+It is highly recommended to run the app inside a virtual environment to avoid version conflicts.
+
+For Windows:
+```cmd
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
-**Mac / Linux:**
+For Mac or Linux:
 ```bash
-python3.9 -m venv venv
-source venv/bin/activate
+python3.9 -m venv .venv
+source .venv/bin/activate
 ```
 
-Step 3 — Install Dependencies
+### Step 3: Install Dependencies
 
+Install the required packages:
 ```bash
 pip install -r requirements.txt
 ```
+Note: MindSpore is a large library. The installation process may take 3 to 5 minutes depending on your internet connection.
 
- MindSpore is a large package. This step may take **3–5 minutes** on first install.
+### Step 4: Configure Environment Variables
 
-Step 4 — Verify Installation
+1. Copy the template configuration file:
+   - On Windows: `copy .env.example .env`
+   - On Mac/Linux: `cp .env.example .env`
+2. Open the `.env` file in a text editor.
+3. Set your `GEMINI_API_KEY` to your API key.
+4. Set `SECRET_KEY` to any random string of characters.
 
-```bash
-python -c "import flask, mindspore; print('All dependencies installed successfully')"
-```
+### Step 5: Start the Server
 
----
-
- Configuration
-
- Step 1 — Create the `.env` file
-
-```bash
-# Windows
-copy .env.example .env
-
-# Mac/Linux
-cp .env.example .env
-```
-
- Step 2 — Add your Gemini API Key
-
-Open `.env` in any text editor and set:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-SECRET_KEY=any-random-string-here
-```
-
-**Getting a Gemini API Key (Free):**
-1. Go to [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-2. Sign in with a Google account
-3. Click **"Create API Key"**
-4. Copy the key and paste it in `.env`
-
----
-
- Running the Application
-
+Run the Flask application:
 ```bash
 python app.py
 ```
+Upon a successful start, you should see output indicating that the database is initialized, the MindSpore model has loaded, and the server is running at:
+`http://localhost:5000`
 
-You should see:
-```
-[MindSpore] Model loaded: mimic_risk_model.ckpt
- * Running on http://0.0.0.0:5000
- * Running on http://192.168.x.x:5000
-```
+## How to Test the Portals
 
-Open your browser and navigate to:
+Open separate browser tabs to view the different roles:
 
-| Portal | URL | Who uses it |
-|---|---|---|
-|Home | `http://localhost:5000` | Landing page |
-|Patient | `http://localhost:5000/patient` | Patients in emergency |
-|Ambulance | `http://localhost:5000/ambulance` | Paramedics / drivers |
-|Volunteer | `http://localhost:5000/volunteer` | First responders |
-| Admin | `http://localhost:5000/admin` | Hospital staff |
-| Sign Language | `http://localhost:5000/sign_language` | Deaf users |
-| Mesh Network | `http://localhost:5000/mesh` | Responder comms |
+1. Landing Page: `http://localhost:5000`
+2. Patient Portal: `http://localhost:5000/patient`
+3. Ambulance Crew: `http://localhost:5000/ambulance` (Auto-logs in as Unit 42)
+4. Volunteer Portal: `http://localhost:5000/volunteer`
+5. Command Center Dashboard: `http://localhost:5000/admin` or `http://localhost:5000/dashboard`
+6. Sign Language Interface: `http://localhost:5000/sign_language`
+7. Mesh Network Interface: `http://localhost:5000/mesh`
 
+## Testing the Simulation Flow
 
----
+1. Open the Admin Dashboard (`http://localhost:5000/dashboard`) in one window.
+2. Open the Patient Portal (`http://localhost:5000/patient`) in a second window.
+3. Scroll to the "Linked Devices" section on the Patient Portal.
+4. Click one of the simulation triggers, such as "Trigger 5.2g Impact Alert from Samsung Watch".
+5. Observe that the Patient Portal transitions to the tracking map view.
+6. The Admin Dashboard will instantly play an alarm sound and show a new incoming case card in the "Incoming Emergency Alerts" section below the traffic map.
+7. Open the Ambulance Portal (`http://localhost:5000/ambulance`) in a third window. It will sound an alarm and prompt the driver to "Accept".
+8. Click "Accept", then select a hospital, and click "Transmit Data" to send a handoff report.
+9. Click "Arrived at ER". You will see the patient automatically disappear from the dashboard's incoming alerts section and move into the Waiting Queue.
 
- Feature Walkthrough
+## Technology Stack
 
- 1.  Patient Emergency Portal
-1. Go to `http://localhost:5000/patient`
-2. Enter symptoms, heart rate, oxygen level, and pain score
-3. Click **"Assess My Condition"** — the AI triage model scores and prioritizes
-4. Nurse Sara (AI Assistant) appears with voice-guided first aid steps
-5. Click **"SEND AMBULANCE"** — browser asks for your GPS location
-6. Confirm your location on the map → ambulance is dispatched
-
- 2.  AI Assistant (Nurse Sara)
-- Type any medical question in the chat box
-- Nurse Sara responds with real AI guidance (powered by Gemini)
-- Say "show me CPR steps" or "start burn guide" to activate illustrated protocols
-- Click 🤟 icon to switch to **Sign Language mode**
-
- 3. Sign Language Mode
-1. From the patient page, click the **🤟 icon** (top-right or inside chat box)
-2. Review the ASL A–Z reference cards
-3. Click **"📷 Start Signing"** — allow camera access
-4. Sign letters using ASL hand shapes — hold each ~0.5 seconds
-5. Or tap **Quick Phrase buttons** (e.g., "Chest Pain", "Help", "Bleeding")
-6. Click **"Review & Send to Triage →"** when done
-
- 4.  Ambulance Portal
-1. Go to `http://localhost:5000/ambulance` and log in
-2. Active cases appear on the map with patient GPS coordinates
-3. Click a case → OSRM provides real road distance, ETA, and turn-by-turn directions
-4. Navigate to patient → update status → navigate to hospital
-
- 5.  Volunteer Portal
-1. Go to `http://localhost:5000/volunteer` and register
-2. Alert sound plays when a nearby emergency is detected
-3. Click **Accept** → map shows patient location with OSRM route
-4. Click **"I'm Responding"** or **"Decline"**
-
- 6.  Mesh Network (Responder Communication)
-1. Go to `http://localhost:5000/mesh`
-2. Enter your name and role, click **"Connect to Mesh"**
-3. All connected responders appear as peers
-4. Type messages or use Quick Alerts: 🆘 Emergency / ✅ All Clear / 🚑 En Route / ❤️ CPR Help
-5. Works on local WiFi **without internet**
-
- 7. Language Translation
-- Click **"اختيار اللغة"** (top-right on any page)
-- Select from 15 languages — the entire UI translates instantly
-- Nurse Sara's voice also switches to speak in the selected language
-
-8. Wearable / IoT Integration
-
-Send a POST request to test auto-dispatch from a smartwatch:
-
-```bash
-curl -X POST http://localhost:5000/api/wearable/data \
-  -H "Content-Type: application/json" \
-  -d '{"device_id":"WATCH-001","hr":168,"spo2":91,"lat":24.7136,"lng":46.6753}'
-```
-
-**Auto-dispatch triggers when:**
-- Heart rate > 160 BPM or < 35 BPM
-- SpO2 < 88%
-- Alert type: `fall_detected` or `irregular_heartbeat`
-
----
-
-AI Model — MindSpore
-
-The triage model is a **3-layer neural network** implemented in **Huawei MindSpore**:
-
-```
-Input (7 vitals) → Dense(64) → ReLU → Dense(32) → ReLU → Dense(5) → ESI Priority
-```
-
-**Training Data:** MIMIC-IV-ED (MIT / Beth Israel Deaconess Medical Center)
-- 80,000 real emergency department visits
-- Features: Temperature, Heart Rate, Respiratory Rate, SpO2, SBP, DBP, Pain Score
-- Labels: Emergency Severity Index (ESI) 1–5
-
-**Model Files:**
-| File | Description |
-|---|---|
-| `mimic_risk_model.ckpt` | Trained MindSpore neural network weights |
-| `mindspore_scaling.json` | Feature normalization parameters from MIMIC data |
-| `train_risk_model_mindspore.py` | Full training script |
-
-> The model loads automatically on startup. If MindSpore is unavailable, the system falls back to evidence-based clinical triage rules.
-
----
-
- Wearable Integration
-
-The `/api/wearable/data` endpoint accepts POST requests from Huawei Health Kit companion apps:
-
-```json
-{
-  "device_id": "HUAWEI-GT4-001",
-  "hr": 72,
-  "spo2": 98,
-  "steps": 3200,
-  "lat": 24.7136,
-  "lng": 46.6753,
-  "alert_type": "fall_detected"
-}
-```
-
-View latest readings at: `GET /api/wearable/latest`
-
-
-
-
- Technology Stack
-
-| Layer | Technology |
-|---|---|
-| **Backend** | Python 3.9, Flask 3.1, SQLAlchemy |
-| **AI Triage** | Huawei MindSpore 2.3.0 (Neural Network) |
-| **AI Assistant** | Google Gemini API (`gemini-flash-lite-latest`) |
-| **Routing** | OSRM (Open Source Routing Machine) |
-| **Sign Language** | MediaPipe Hands (ASL recognition) |
-| **Mesh Network** | WebRTC + Flask Signaling Server |
-| **Translation** | Google Translate Widget |
-| **Database** | SQLite (dev) / PostgreSQL (production) |
-| **Maps** | Leaflet.js + OpenStreetMap |
-| **Frontend** | HTML5, Vanilla CSS, JavaScript |
-| **Wearables** | Huawei Health Kit REST API |
-
----
-
- License
-
-This project is submitted for academic and competition purposes.  
-Dataset: [MIMIC-IV-ED](https://physionet.org/content/mimic-iv-ed/2.2/) — PhysioNet / MIT License.
-
----
-
-<div align="center">
-
-Built with ❤️ for emergency response - saving lives with AI
-
-</div>
+- Backend: Python 3.9, Flask 3.1, SQLAlchemy, Flask-SocketIO.
+- AI Triage Engine: Huawei MindSpore 2.3.0 (Neural Network).
+- AI Assistant: Google Gemini API.
+- Mapping and Navigation: Leaflet.js, OpenStreetMap, OSRM.
+- Sign Language Processing: MediaPipe Hands.
+- Mesh Signaling: WebRTC Peer-to-Peer.
