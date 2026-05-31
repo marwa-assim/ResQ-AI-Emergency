@@ -36,6 +36,24 @@
       overflow-x: hidden;
     }
 
+    /* Hybrid Avatar CSS Animations */
+    .avatar-bg-img {
+      transition: transform 0.3s ease;
+      animation: nurse-breath 4s ease-in-out infinite;
+    }
+    .avatar-bg-img.is-signing {
+      animation: nurse-breath 4s ease-in-out infinite, nurse-sway 2.5s ease-in-out infinite;
+    }
+    @keyframes nurse-breath {
+      0%, 100% { transform: scale(1.02); }
+      50% { transform: scale(1.05) translateY(-2px); }
+    }
+    @keyframes nurse-sway {
+      0%, 100% { transform: scale(1.02) rotate(0deg); }
+      33% { transform: scale(1.03) rotate(0.8deg) translateX(0.5px); }
+      66% { transform: scale(1.03) rotate(-0.8deg) translateX(-0.5px); }
+    }
+
     /* Modern SOS Bar */
     .sos-bar {
       background: rgba(69, 10, 10, 0.9);
@@ -1359,8 +1377,8 @@
         this.width = this.canvas.width;
         this.height = this.canvas.height;
 
-        this.armLength = 35;
-        this.forearmLength = 32;
+        this.armLength = 32;
+        this.forearmLength = 28;
 
         this.joints = {
           lShoulder: { angle: 1.4, target: 1.4 },
@@ -1374,15 +1392,13 @@
           right: { shape: 'relaxed', target: 'relaxed' }
         };
 
-        this.lShoulderPos = { x: 75, y: 95 };
-        this.rShoulderPos = { x: 145, y: 95 };
-        
-        this.headCenter = { x: 110, y: 50 };
-        this.headRadius = 20;
+        this.lShoulderPos = { x: 62, y: 135 };
+        this.rShoulderPos = { x: 158, y: 135 };
 
         this.queue = [];
         this.isPlayingQueue = false;
-        this.currentText = "";
+        this.currentGesture = null;
+        this.gestureTick = 0;
 
         this.running = true;
         this.tick = 0;
@@ -1391,85 +1407,174 @@
 
       update() {
         this.tick++;
+        this.gestureTick++;
+
+        if (this.currentGesture) {
+          this.applyGestureDynamics(this.currentGesture, this.gestureTick);
+        } else {
+          this.applyGestureDynamics('idle', this.gestureTick);
+        }
+
         const speed = 0.15;
         for (let j in this.joints) {
           this.joints[j].angle += (this.joints[j].target - this.joints[j].angle) * speed;
         }
       }
 
-      setPose(poseName) {
-        const poses = {
-          'idle': {
-            rShoulder: 1.4, rElbow: 0.3, lShoulder: 1.4, lElbow: 0.3,
-            rHand: 'relaxed', lHand: 'relaxed'
-          },
-          'cpr': {
-            rShoulder: 0.8, rElbow: 1.2, lShoulder: 0.8, lElbow: 1.2,
-            rHand: 'fist', lHand: 'fist'
-          },
-          'help': {
-            rShoulder: 0.6, rElbow: 1.5, lShoulder: 0.4, lElbow: 1.6,
-            rHand: 'open', lHand: 'open'
-          },
-          'bleeding': {
-            rShoulder: 0.3, rElbow: 1.8, lShoulder: 1.4, lElbow: 0.3,
-            rHand: 'open', lHand: 'relaxed'
-          },
-          'pain': {
-            rShoulder: 0.5, rElbow: 1.1, lShoulder: 0.5, lElbow: 1.1,
-            rHand: 'open', lHand: 'open'
-          },
-          'call': {
-            rShoulder: -0.8, rElbow: 2.2, lShoulder: 1.4, lElbow: 0.3,
-            rHand: 'phone', lHand: 'relaxed'
-          },
-          'choke': {
-            rShoulder: -0.5, rElbow: 2.3, lShoulder: -0.5, lElbow: 2.3,
-            rHand: 'curved', lHand: 'curved'
-          },
-          'water': {
-            rShoulder: -0.4, rElbow: 2.1, lShoulder: 1.4, lElbow: 0.3,
-            rHand: 'curved', lHand: 'relaxed'
-          },
-          'elevate': {
-            rShoulder: -1.8, rElbow: 0.5, lShoulder: 1.4, lElbow: 0.3,
-            rHand: 'open', lHand: 'relaxed'
-          },
-          'a': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'fist', lHand: 'relaxed' },
-          'b': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'open', lHand: 'relaxed' },
-          'c': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'curved', lHand: 'relaxed' },
-          'd': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'e': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'fist', lHand: 'relaxed' },
-          'f': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'curved', lHand: 'relaxed' },
-          'g': { rShoulder: -0.2, rElbow: 1.3, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'h': { rShoulder: -0.2, rElbow: 1.3, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'i': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'j': { rShoulder: -0.2, rElbow: 1.6, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'k': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'open', lHand: 'relaxed' },
-          'l': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'm': { rShoulder: -0.2, rElbow: 1.4, lShoulder: 1.4, lElbow: 0.3, rHand: 'fist', lHand: 'relaxed' },
-          'n': { rShoulder: -0.2, rElbow: 1.4, lShoulder: 1.4, lElbow: 0.3, rHand: 'fist', lHand: 'relaxed' },
-          'o': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'curved', lHand: 'relaxed' },
-          'p': { rShoulder: -0.2, rElbow: 1.4, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'q': { rShoulder: -0.2, rElbow: 1.3, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'r': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          's': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'fist', lHand: 'relaxed' },
-          't': { rShoulder: -0.2, rElbow: 1.4, lShoulder: 1.4, lElbow: 0.3, rHand: 'fist', lHand: 'relaxed' },
-          'u': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'v': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' },
-          'w': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'open', lHand: 'relaxed' },
-          'x': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'curved', lHand: 'relaxed' },
-          'y': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'phone', lHand: 'relaxed' },
-          'z': { rShoulder: -0.2, rElbow: 1.5, lShoulder: 1.4, lElbow: 0.3, rHand: 'point', lHand: 'relaxed' }
-        };
+      applyGestureDynamics(gestureName, gTick) {
+        const name = gestureName.toLowerCase();
+        
+        if (name === 'cpr') {
+          const cycle = Math.sin(gTick * 0.4);
+          this.joints.rShoulder.target = 0.8 + cycle * 0.12;
+          this.joints.lShoulder.target = 0.8 + cycle * 0.12;
+          this.joints.rElbow.target = 1.0;
+          this.joints.lElbow.target = 1.0;
+          this.handShapes.right.target = 'fist';
+          this.handShapes.left.target = 'fist';
+        } else if (name === 'pain') {
+          this.joints.rShoulder.target = 0.5 + Math.sin(gTick * 0.25) * 0.08;
+          this.joints.lShoulder.target = 0.5 - Math.sin(gTick * 0.25) * 0.08;
+          this.joints.rElbow.target = 1.2 + Math.cos(gTick * 0.25) * 0.08;
+          this.joints.lElbow.target = 1.2 - Math.cos(gTick * 0.25) * 0.08;
+          this.handShapes.right.target = 'point';
+          this.handShapes.left.target = 'point';
+        } else if (name === 'bleeding') {
+          const phase = (gTick % 90) / 90;
+          this.joints.rShoulder.target = -0.3 + phase * 0.8;
+          this.joints.rElbow.target = 2.0 - phase * 1.0;
+          this.handShapes.right.target = Math.sin(gTick * 0.5) > 0 ? 'open' : 'relaxed';
+          this.joints.lShoulder.target = 1.4;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.left.target = 'relaxed';
+        } else if (name === 'water') {
+          const cycle = Math.sin(gTick * 0.3);
+          this.joints.rShoulder.target = -0.4;
+          this.joints.rElbow.target = 2.1 + (cycle > 0 ? 0.15 : -0.15);
+          this.handShapes.right.target = 'point';
+          this.joints.lShoulder.target = 1.4;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.left.target = 'relaxed';
+        } else if (name === 'call') {
+          this.joints.rShoulder.target = -0.8;
+          this.joints.rElbow.target = 2.2 + Math.sin(gTick * 0.15) * 0.06;
+          this.handShapes.right.target = 'phone';
+          this.joints.lShoulder.target = 1.4;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.left.target = 'relaxed';
+        } else if (name === 'choke') {
+          this.joints.rShoulder.target = -0.5 + Math.sin(gTick * 0.2) * 0.05;
+          this.joints.lShoulder.target = -0.5 - Math.sin(gTick * 0.2) * 0.05;
+          this.joints.rElbow.target = 2.3;
+          this.joints.lElbow.target = 2.3;
+          this.handShapes.right.target = 'curved';
+          this.handShapes.left.target = 'curved';
+        } else if (name === 'safe') {
+          const phase = (gTick % 120) / 120;
+          if (phase < 0.4) {
+            this.joints.rShoulder.target = 0.7;
+            this.joints.lShoulder.target = 0.7;
+            this.joints.rElbow.target = 1.2;
+            this.joints.lElbow.target = 1.2;
+          } else {
+            this.joints.rShoulder.target = 1.2;
+            this.joints.lShoulder.target = 1.2;
+            this.joints.rElbow.target = 0.4;
+            this.joints.lElbow.target = 0.4;
+          }
+          this.handShapes.right.target = 'open';
+          this.handShapes.left.target = 'open';
+        } else if (name === 'breath') {
+          const cycle = Math.sin(gTick * 0.08);
+          this.joints.rShoulder.target = 0.4 + cycle * 0.15;
+          this.joints.lShoulder.target = 0.4 + cycle * 0.15;
+          this.joints.rElbow.target = 1.4 - cycle * 0.2;
+          this.joints.lElbow.target = 1.4 - cycle * 0.2;
+          this.handShapes.right.target = 'open';
+          this.handShapes.left.target = 'open';
+        } else if (name === 'avoid') {
+          const cycle = Math.sin(gTick * 0.3);
+          this.joints.rShoulder.target = 0.4 + cycle * 0.2;
+          this.joints.lShoulder.target = 0.4 - cycle * 0.2;
+          this.joints.rElbow.target = 1.5;
+          this.joints.lElbow.target = 1.5;
+          this.handShapes.right.target = 'fist';
+          this.handShapes.left.target = 'fist';
+        } else if (name === 'time') {
+          this.joints.lShoulder.target = 0.8;
+          this.joints.lElbow.target = 0.8;
+          this.handShapes.left.target = 'open';
+          const cycle = Math.sin(gTick * 0.35);
+          this.joints.rShoulder.target = 0.5;
+          this.joints.rElbow.target = 1.4 + (cycle > 0 ? 0.2 : -0.1);
+          this.handShapes.right.target = 'point';
+        } else if (name === 'bandage') {
+          const angle = gTick * 0.2;
+          this.joints.rShoulder.target = 0.6 + Math.cos(angle) * 0.15;
+          this.joints.rElbow.target = 1.2 + Math.sin(angle) * 0.15;
+          this.joints.lShoulder.target = 0.6 - Math.cos(angle) * 0.15;
+          this.joints.lElbow.target = 1.2 - Math.sin(angle) * 0.15;
+          this.handShapes.right.target = 'open';
+          this.handShapes.left.target = 'open';
+        } else if (name === 'help') {
+          const cycle = Math.sin(gTick * 0.15) * 0.08;
+          this.joints.lShoulder.target = 0.8 + cycle;
+          this.joints.lElbow.target = 0.7;
+          this.handShapes.left.target = 'open';
+          this.joints.rShoulder.target = 0.6 + cycle;
+          this.joints.rElbow.target = 1.3;
+          this.handShapes.right.target = 'fist';
+        } else if (name === 'elevate') {
+          this.joints.rShoulder.target = -1.8;
+          this.joints.rElbow.target = 0.5;
+          this.handShapes.right.target = 'open';
+          this.joints.lShoulder.target = 1.4;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.left.target = 'relaxed';
+        } else if (name === 'check') {
+          this.joints.rShoulder.target = 0.6;
+          this.joints.rElbow.target = 0.8;
+          this.handShapes.right.target = 'open';
+          this.joints.lShoulder.target = 1.4;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.left.target = 'relaxed';
+        } else if (name === 'recovery') {
+          this.joints.rShoulder.target = 0.8;
+          this.joints.rElbow.target = 0.7;
+          this.handShapes.right.target = 'open';
+          this.joints.lShoulder.target = 1.4;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.left.target = 'relaxed';
+        } else if (name === 'epipen') {
+          this.joints.rShoulder.target = 0.2;
+          this.joints.rElbow.target = 1.2;
+          this.handShapes.right.target = 'fist';
+          this.joints.lShoulder.target = 1.4;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.left.target = 'relaxed';
+        } else {
+          const cycle = Math.sin(gTick * 0.05) * 0.03;
+          this.joints.rShoulder.target = 1.4 + cycle;
+          this.joints.rElbow.target = 0.3;
+          this.joints.lShoulder.target = 1.4 + cycle;
+          this.joints.lElbow.target = 0.3;
+          this.handShapes.right.target = 'relaxed';
+          this.handShapes.left.target = 'relaxed';
+        }
+      }
 
-        const p = poses[poseName.toLowerCase()] || poses['idle'];
-        this.joints.rShoulder.target = p.rShoulder;
-        this.joints.rElbow.target = p.rElbow;
-        this.joints.lShoulder.target = p.lShoulder;
-        this.joints.lElbow.target = p.lElbow;
-        this.handShapes.right.target = p.rHand;
-        this.handShapes.left.target = p.lHand;
+      setPose(poseName) {
+        this.currentGesture = poseName.toLowerCase();
+        this.gestureTick = 0;
+        
+        const bgImg = document.getElementById('avatar-bg');
+        if (bgImg) {
+          if (this.currentGesture && this.currentGesture !== 'idle') {
+            bgImg.classList.add('is-signing');
+          } else {
+            bgImg.classList.remove('is-signing');
+          }
+        }
       }
 
       signSentence(text) {
@@ -1479,21 +1584,54 @@
         const words = cleanText.split(/\s+/);
         
         words.forEach(word => {
-          const directConcepts = ['cpr', 'help', 'bleeding', 'pain', 'call', 'choke', 'water', 'elevate'];
+          const directConcepts = [
+            'cpr', 'compress', 'chest',
+            'help', 'support', 'assist',
+            'bleeding', 'wound', 'pressure', 'press',
+            'pain', 'hurt', 'ache',
+            'call', '911', 'phone', 'emergency',
+            'choke', 'choking', 'airway', 'blockage', 'chin', 'forehead',
+            'water', 'cool', 'burn', 'rinse',
+            'elevate', 'raise', 'high',
+            'breath', 'breathe', 'mouth',
+            'check', 'response', 'shout', 'tap',
+            'safe', 'clear', 'danger', 'hazard',
+            'time', 'watch', 'clock', 'minute',
+            'recovery', 'side', 'lie',
+            'epipen', 'inject', 'needle',
+            'bandage', 'wrap', 'cover',
+            'avoid', 'warning', 'never', 'donot', 'no'
+          ];
+          
           let matchingConcept = directConcepts.find(c => word.includes(c));
           
           if (matchingConcept) {
-            this.queue.push({ type: 'word', value: matchingConcept, label: matchingConcept.toUpperCase() });
-          } else {
-            for (let i = 0; i < word.length; i++) {
-              const char = word[i];
-              if (char >= 'a' && char <= 'z') {
-                this.queue.push({ type: 'letter', value: char, label: char.toUpperCase() });
-              }
-            }
+            let poseValue = matchingConcept;
+            if (['compress', 'chest'].includes(matchingConcept)) poseValue = 'cpr';
+            if (['support', 'assist'].includes(matchingConcept)) poseValue = 'help';
+            if (['wound', 'pressure', 'press'].includes(matchingConcept)) poseValue = 'bleeding';
+            if (['hurt', 'ache'].includes(matchingConcept)) poseValue = 'pain';
+            if (['911', 'phone', 'emergency'].includes(matchingConcept)) poseValue = 'call';
+            if (['choking', 'airway', 'blockage', 'chin', 'forehead'].includes(matchingConcept)) poseValue = 'choke';
+            if (['cool', 'burn', 'rinse'].includes(matchingConcept)) poseValue = 'water';
+            if (['raise', 'high'].includes(matchingConcept)) poseValue = 'elevate';
+            if (['breathe', 'mouth'].includes(matchingConcept)) poseValue = 'breath';
+            if (['response', 'shout', 'tap'].includes(matchingConcept)) poseValue = 'check';
+            if (['clear', 'danger', 'hazard'].includes(matchingConcept)) poseValue = 'safe';
+            if (['watch', 'clock', 'minute'].includes(matchingConcept)) poseValue = 'time';
+            if (['side', 'lie'].includes(matchingConcept)) poseValue = 'recovery';
+            if (['inject', 'needle'].includes(matchingConcept)) poseValue = 'epipen';
+            if (['wrap', 'cover'].includes(matchingConcept)) poseValue = 'bandage';
+            if (['warning', 'never', 'donot', 'no'].includes(matchingConcept)) poseValue = 'avoid';
+            
+            this.queue.push({ type: 'word', value: poseValue, label: poseValue.toUpperCase() });
+            this.queue.push({ type: 'pause', value: 'idle', label: '' });
           }
-          this.queue.push({ type: 'pause', value: 'idle', label: '' });
         });
+
+        if (this.queue.length === 0) {
+          this.queue.push({ type: 'word', value: 'idle', label: 'READY' });
+        }
 
         if (!this.isPlayingQueue) {
           this.playNextInQueue();
@@ -1523,158 +1661,94 @@
 
         if (item.type === 'pause') {
           this.setPose('idle');
-          setTimeout(() => this.playNextInQueue(), 300);
+          setTimeout(() => this.playNextInQueue(), 400);
         } else {
           this.setPose(item.value);
           if (item.value === 'cpr') {
             let presses = 0;
             const interval = setInterval(() => {
-              this.joints.rShoulder.target = presses % 2 === 0 ? 0.7 : 0.9;
-              this.joints.lShoulder.target = presses % 2 === 0 ? 0.7 : 0.9;
               presses++;
-              if (presses > 4) {
+              if (presses > 6) {
                 clearInterval(interval);
                 this.playNextInQueue();
               }
             }, 150);
           } else {
-            setTimeout(() => this.playNextInQueue(), item.type === 'word' ? 1200 : 500);
+            setTimeout(() => this.playNextInQueue(), 1400);
           }
         }
       }
 
       draw() {
         this.ctx.clearRect(0, 0, this.width, this.height);
-        
-        // Background cybernetic grid lines
-        this.ctx.strokeStyle = 'rgba(234, 179, 8, 0.02)';
-        this.ctx.lineWidth = 1;
-        for (let i = 20; i < this.width; i += 20) {
-          this.ctx.beginPath();
-          this.ctx.moveTo(i, 0); this.ctx.lineTo(i, this.height);
-          this.ctx.stroke();
-          this.ctx.beginPath();
-          this.ctx.moveTo(0, i); this.ctx.lineTo(this.width, i);
-          this.ctx.stroke();
-        }
 
-        this.ctx.shadowBlur = 10;
-        this.ctx.shadowColor = '#eab308';
-        
-        // 1. Neck (Skin tone)
-        this.ctx.fillStyle = '#ffe4e6';
-        this.ctx.beginPath();
-        this.ctx.rect(98, 70, 24, 25);
-        this.ctx.fill();
+        // Apply realistic drop-shadow parameters to the canvas drawings
+        this.ctx.shadowColor = 'rgba(15, 23, 42, 0.45)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.shadowOffsetY = 4;
+        this.ctx.shadowOffsetX = 1;
 
-        // 2. Torso (Medical Scrubs Uniform)
-        this.ctx.fillStyle = '#1e293b'; // Slate/dark gray scrubs
-        this.ctx.beginPath();
-        this.ctx.moveTo(30, 190);
-        this.ctx.lineTo(75, 95);
-        this.ctx.lineTo(145, 95);
-        this.ctx.lineTo(190, 190);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Scrubs V-Neck Collar
-        this.ctx.strokeStyle = '#06b6d4'; // Teal/cyan scrubs trim
-        this.ctx.lineWidth = 3.5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(92, 95);
-        this.ctx.lineTo(110, 118);
-        this.ctx.lineTo(128, 95);
-        this.ctx.stroke();
-
-        // 3. Face (Skin tone)
-        this.ctx.fillStyle = '#ffe4e6';
-        this.ctx.beginPath();
-        this.ctx.arc(this.headCenter.x, this.headCenter.y, this.headRadius, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // 4. Hair (Modern styled hair and bun)
-        this.ctx.fillStyle = '#334155'; // Dark hair
-        this.ctx.beginPath();
-        // Hair cap on top of head
-        this.ctx.arc(this.headCenter.x, this.headCenter.y - 4, this.headRadius + 0.8, Math.PI, 2 * Math.PI);
-        // Bun
-        this.ctx.arc(this.headCenter.x, this.headCenter.y - 23, 7.5, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // 5. Facial Features (Eyes & Mouth)
-        this.ctx.shadowBlur = 0; // Turn off glow for eyes/mouth
-        this.ctx.fillStyle = '#0f172a';
-        const isBlinking = Math.sin(this.tick * 0.05) > 0.95;
-        
-        if (isBlinking) {
-          this.ctx.strokeStyle = '#0f172a';
-          this.ctx.lineWidth = 2;
-          this.ctx.beginPath();
-          this.ctx.moveTo(98, 48); this.ctx.lineTo(104, 48);
-          this.ctx.moveTo(116, 48); this.ctx.lineTo(122, 48);
-          this.ctx.stroke();
-        } else {
-          this.ctx.beginPath();
-          this.ctx.arc(101, 48, 2.2, 0, Math.PI * 2);
-          this.ctx.arc(119, 48, 2.2, 0, Math.PI * 2);
-          this.ctx.fill();
-        }
-        
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        const mouthWiggle = Math.sin(this.tick * 0.1) * 1.5;
-        this.ctx.arc(110, 58 + mouthWiggle * 0.2, 4, 0.2, Math.PI - 0.2);
-        this.ctx.stroke();
-
-        // 6. Arms (Scrubs Sleeves + Skin Forearms)
-        this.ctx.shadowBlur = 10;
-        this.ctx.shadowColor = '#ffe4e6';
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
 
-        // LEFT ARM kinematics positions
+        // LEFT ARM (Procedural skin & sleeve paths)
         const lSE = this.getJointPosition(this.lShoulderPos, this.joints.lShoulder.angle, this.armLength, -1);
         const lEW = this.getJointPosition(lSE, this.joints.lShoulder.angle + this.joints.lElbow.angle, this.forearmLength, -1);
         
-        // Left Upper sleeve (Teal/scrubs blue)
-        this.ctx.strokeStyle = '#1e293b';
+        // Sleeve Gradient (Linear matching scrubs blue)
+        const lSleeveGrad = this.ctx.createLinearGradient(this.lShoulderPos.x, this.lShoulderPos.y, lSE.x, lSE.y);
+        lSleeveGrad.addColorStop(0, '#1d4ed8'); // Dark scrubs blue
+        lSleeveGrad.addColorStop(1, '#2563eb'); // Lighter blue at elbow
+
+        this.ctx.strokeStyle = lSleeveGrad;
         this.ctx.lineWidth = 14;
         this.ctx.beginPath();
         this.ctx.moveTo(this.lShoulderPos.x, this.lShoulderPos.y);
         this.ctx.lineTo(lSE.x, lSE.y);
         this.ctx.stroke();
-        // Left Forearm (Skin tone)
-        this.ctx.strokeStyle = '#ffe4e6';
+
+        // Forearm Skin Gradient
+        const lForearmGrad = this.ctx.createLinearGradient(lSE.x, lSE.y, lEW.x, lEW.y);
+        lForearmGrad.addColorStop(0, '#ffd1d9'); // Soft skin tone pinkish-white
+        lForearmGrad.addColorStop(1, '#fecdd3');
+
+        this.ctx.strokeStyle = lForearmGrad;
         this.ctx.lineWidth = 9.5;
         this.ctx.beginPath();
         this.ctx.moveTo(lSE.x, lSE.y);
         this.ctx.lineTo(lEW.x, lEW.y);
         this.ctx.stroke();
         
-        // Left Hand Shape
         this.drawHand(lEW, this.joints.lShoulder.angle + this.joints.lElbow.angle, this.handShapes.left.target, -1);
 
         // RIGHT ARM
         const rSE = this.getJointPosition(this.rShoulderPos, this.joints.rShoulder.angle, this.armLength, 1);
         const rEW = this.getJointPosition(rSE, this.joints.rShoulder.angle - this.joints.rElbow.angle, this.forearmLength, 1);
         
-        // Right Upper sleeve (Teal/scrubs blue)
-        this.ctx.strokeStyle = '#1e293b';
+        // Sleeve Gradient
+        const rSleeveGrad = this.ctx.createLinearGradient(this.rShoulderPos.x, this.rShoulderPos.y, rSE.x, rSE.y);
+        rSleeveGrad.addColorStop(0, '#1d4ed8');
+        rSleeveGrad.addColorStop(1, '#2563eb');
+
+        this.ctx.strokeStyle = rSleeveGrad;
         this.ctx.lineWidth = 14;
         this.ctx.beginPath();
         this.ctx.moveTo(this.rShoulderPos.x, this.rShoulderPos.y);
         this.ctx.lineTo(rSE.x, rSE.y);
         this.ctx.stroke();
-        // Right Forearm (Skin tone)
-        this.ctx.strokeStyle = '#ffe4e6';
+
+        // Forearm Skin Gradient
+        const rForearmGrad = this.ctx.createLinearGradient(rSE.x, rSE.y, rEW.x, rEW.y);
+        rForearmGrad.addColorStop(0, '#ffd1d9');
+        rForearmGrad.addColorStop(1, '#fecdd3');
+
+        this.ctx.strokeStyle = rForearmGrad;
         this.ctx.lineWidth = 9.5;
         this.ctx.beginPath();
         this.ctx.moveTo(rSE.x, rSE.y);
         this.ctx.lineTo(rEW.x, rEW.y);
         this.ctx.stroke();
         
-        // Right Hand Shape
         this.drawHand(rEW, this.joints.rShoulder.angle - this.joints.rElbow.angle, this.handShapes.right.target, 1);
       }
 
@@ -1691,12 +1765,17 @@
         this.ctx.translate(wristPos.x, wristPos.y);
         this.ctx.rotate(Math.PI/2 + (dir * armAngle));
         this.ctx.lineWidth = 3.5;
-        this.ctx.strokeStyle = '#ffe4e6';
-        this.ctx.fillStyle = '#ffe4e6';
+
+        // Radial skin gradient for hand palm and fingers
+        const handGrad = this.ctx.createRadialGradient(0, -3, 2, 0, -3, 8);
+        handGrad.addColorStop(0, '#ffd1d9');
+        handGrad.addColorStop(1, '#fecdd3');
+
+        this.ctx.strokeStyle = '#fecdd3';
+        this.ctx.fillStyle = handGrad;
 
         this.ctx.beginPath();
         if (shape === 'open') {
-          // Palm + spread fingers
           this.ctx.arc(0, -2, 5, 0, Math.PI * 2);
           this.ctx.fill();
           this.ctx.beginPath();
@@ -1713,21 +1792,19 @@
           this.ctx.arc(0, -5, 8, -Math.PI/3, Math.PI + Math.PI/3);
           this.ctx.stroke();
         } else if (shape === 'point') {
-          // Palm + pointing index
           this.ctx.arc(0, -2, 5, 0, Math.PI * 2);
           this.ctx.fill();
           this.ctx.beginPath();
           this.ctx.moveTo(0, -2); this.ctx.lineTo(0, -15);
           this.ctx.stroke();
         } else if (shape === 'phone') {
-          // Palm + extended thumb/pinky
           this.ctx.arc(0, -2, 5, 0, Math.PI * 2);
           this.ctx.fill();
           this.ctx.beginPath();
           this.ctx.moveTo(-2, -2); this.ctx.lineTo(-12, -9);
           this.ctx.moveTo(2, -2); this.ctx.lineTo(12, -9);
           this.ctx.stroke();
-        } else { // relaxed
+        } else {
           this.ctx.arc(0, -3, 6, 0, Math.PI * 2);
           this.ctx.fill();
         }
@@ -2672,7 +2749,12 @@
 
                   <!-- Live Avatar Canvas Window -->
                   <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; background:rgba(0,0,0,0.25); border-radius:12px; border:1px solid rgba(255,255,255,0.04); padding:10px; min-height:220px; margin-bottom:12px; position:relative; overflow:hidden;">
-                    <canvas id="asl-avatar-canvas" width="220" height="200" style="background:rgba(15,23,42,0.4); border-radius:8px; border:1px solid rgba(234,179,8,0.2);"></canvas>
+                    <div id="avatar-container" style="position:relative; width:220px; height:200px; border-radius:8px; border:1px solid rgba(234,179,8,0.2); overflow:hidden; background:rgba(15,23,42,0.4);">
+                      <!-- Photorealistic background image of the female nurse -->
+                      <img id="avatar-bg" src="/static/img/realistic_female_nurse.png" class="avatar-bg-img" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; z-index:1; transform-origin:bottom center;">
+                      <!-- Overlay transparent canvas for moving arms -->
+                      <canvas id="asl-avatar-canvas" width="220" height="200" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:2; pointer-events:none; background:transparent;"></canvas>
+                    </div>
                     <div id="avatar-sign-overlay" style="position:absolute; bottom:20px; font-size:0.75rem; color:#eab308; font-weight:800; background:rgba(0,0,0,0.6); padding:2px 8px; border-radius:4px; border:1px solid rgba(234,179,8,0.3); pointer-events:none; display:none; z-index:10;">
                       Signing: <span id="avatar-current-sign" style="text-shadow:0 0 5px #eab308;"></span>
                     </div>
@@ -2687,13 +2769,13 @@
                       ${gestureDesc}
                     </div>
                     
-                    <!-- Collapsible Fingerspelling Translation -->
-                    <details style="margin-top:8px; border-top:1px dashed rgba(234,179,8,0.15); padding-top:8px; cursor:pointer;">
+                    <!-- Collapsible ASL Concept Glossary -->
+                    <details style="margin-top:8px; border-top:1px dashed rgba(234,179,8,0.15); padding-top:8px; cursor:pointer;" open>
                       <summary style="font-size:0.7rem; color:#eab308; font-weight:700; display:flex; align-items:center; gap:4px; outline:none; user-select:none;">
-                        <i class="fa-solid fa-chevron-down" style="font-size:0.65rem;"></i> Show Fingerspelling Spelling...
+                        <i class="fa-solid fa-chevron-down" style="font-size:0.65rem;"></i> ASL Gesture Dictionary
                       </summary>
                       <div style="margin-top:6px; animation: slideUpFade 0.2s ease;">
-                        ${getAslFingerspellingHtml(step.text)}
+                        ${getAslConceptGlossaryHtml(step.text)}
                       </div>
                     </details>
                   </div>
@@ -2847,51 +2929,57 @@
     const resq = new ResQEngine();
 
     // ── ASL Alphabet URLs & Fingerspelling Helpers ──
-    const ASL_ALPHABET_URLS = {
-      "A": "https://upload.wikimedia.org/wikipedia/commons/2/27/Sign_language_A.svg",
-      "B": "https://upload.wikimedia.org/wikipedia/commons/1/18/Sign_language_B.svg",
-      "C": "https://upload.wikimedia.org/wikipedia/commons/e/e3/Sign_language_C.svg",
-      "D": "https://upload.wikimedia.org/wikipedia/commons/0/06/Sign_language_D.svg",
-      "E": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Sign_language_E.svg",
-      "F": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Sign_language_F.svg",
-      "G": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Sign_language_G.svg",
-      "H": "https://upload.wikimedia.org/wikipedia/commons/9/97/Sign_language_H.svg",
-      "I": "https://upload.wikimedia.org/wikipedia/commons/1/10/Sign_language_I.svg",
-      "J": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Sign_language_J.svg",
-      "K": "https://upload.wikimedia.org/wikipedia/commons/9/97/Sign_language_K.svg",
-      "L": "https://upload.wikimedia.org/wikipedia/commons/d/d2/Sign_language_L.svg",
-      "M": "https://upload.wikimedia.org/wikipedia/commons/c/c4/Sign_language_M.svg",
-      "N": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Sign_language_N.svg",
-      "O": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Sign_language_O.svg",
-      "P": "https://upload.wikimedia.org/wikipedia/commons/0/08/Sign_language_P.svg",
-      "Q": "https://upload.wikimedia.org/wikipedia/commons/3/34/Sign_language_Q.svg",
-      "R": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Sign_language_R.svg",
-      "S": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Sign_language_S.svg",
-      "T": "https://upload.wikimedia.org/wikipedia/commons/1/13/Sign_language_T.svg",
-      "U": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Sign_language_U.svg",
-      "V": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Sign_language_V.svg",
-      "W": "https://upload.wikimedia.org/wikipedia/commons/8/83/Sign_language_W.svg",
-      "X": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Sign_language_X.svg",
-      "Y": "https://upload.wikimedia.org/wikipedia/commons/1/1d/Sign_language_Y.svg",
-      "Z": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Sign_language_Z.svg"
-    };
+    function getAslConceptGlossaryHtml(text) {
+      const textLower = text.toLowerCase();
+      const directConcepts = [
+        { key: 'cpr', title: 'CPR', desc: 'Push hard and fast on center of chest.' },
+        { key: 'call', title: 'CALL 911', desc: 'Make a Y phone sign next to your ear.' },
+        { key: 'bleeding', title: 'BLEEDING', desc: 'Apply direct pressure with a clean cloth.' },
+        { key: 'pain', title: 'PAIN', desc: 'Twist index fingers pointing near pain area.' },
+        { key: 'choke', title: 'CHOKING', desc: 'Clutch throat with both hands.' },
+        { key: 'water', title: 'COOL WATER', desc: 'Tap chin with the W handshape.' },
+        { key: 'elevate', title: 'ELEVATE', desc: 'Raise the injured limb high.' },
+        { key: 'breath', title: 'BREATHE', desc: 'Rhythmic deep breathing with flat hands on chest.' },
+        { key: 'check', title: 'CHECK PATIENT', desc: 'Tap shoulders and shout to check response.' },
+        { key: 'safe', title: 'SAFE AREA', desc: 'Cross wrists and sweep them outwards.' },
+        { key: 'time', title: 'TIME', desc: 'Tap index finger on your wrist twice.' },
+        { key: 'recovery', title: 'RECOVERY POSITION', desc: 'Roll patient onto their side.' },
+        { key: 'epipen', title: 'EPIPEN', desc: 'Firmly press auto-injector into outer thigh.' },
+        { key: 'bandage', title: 'BANDAGE', desc: 'Roll hands in a circular motion (wrapping).' },
+        { key: 'avoid', title: 'AVOID / WARNING', desc: 'Sweep hands out in a stop motion.' }
+      ];
 
-    function getAslFingerspellingHtml(text) {
-      const clean = text.toUpperCase().replace(/[^A-Z\s]/g, '');
-      let html = '<div style="display:inline-flex; flex-wrap:wrap; gap:5px; margin-top:8px; background:rgba(0,0,0,0.25); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">';
-      for (let i = 0; i < clean.length; i++) {
-        const char = clean[i];
-        if (char === ' ') {
-          html += '<div style="width:14px; height:32px;"></div>';
-        } else if (ASL_ALPHABET_URLS[char]) {
-          html += `
-            <div style="display:flex; flex-direction:column; align-items:center; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:4px; width:34px; box-sizing:border-box;">
-              <img src="${ASL_ALPHABET_URLS[char]}" style="width:26px; height:26px; filter:invert(1) sepia(1) saturate(10) hue-rotate(15deg); display:block;" alt="${char}">
-              <span style="font-size:0.6rem; color:#eab308; font-weight:700; margin-top:2px; line-height:1;">${char}</span>
-            </div>
-          `;
-        }
-      }
+      const matches = directConcepts.filter(c => {
+        if (c.key === 'cpr') return textLower.includes('cpr') || textLower.includes('compress');
+        if (c.key === 'call') return textLower.includes('call') || textLower.includes('911') || textLower.includes('phone') || textLower.includes('emergency');
+        if (c.key === 'bleeding') return textLower.includes('bleed') || textLower.includes('blood') || textLower.includes('pressure') || textLower.includes('wound');
+        if (c.key === 'pain') return textLower.includes('pain') || textLower.includes('hurt') || textLower.includes('ache');
+        if (c.key === 'choke') return textLower.includes('chok') || textLower.includes('blockage') || textLower.includes('airway') || textLower.includes('thrust') || textLower.includes('heimlich');
+        if (c.key === 'water') return textLower.includes('water') || textLower.includes('cool') || textLower.includes('burn') || textLower.includes('rinse');
+        if (c.key === 'elevate') return textLower.includes('elevate') || textLower.includes('raise') || textLower.includes('high');
+        if (c.key === 'breath') return textLower.includes('breath') || textLower.includes('breathe') || textLower.includes('mouth');
+        if (c.key === 'check') return textLower.includes('check') || textLower.includes('response') || textLower.includes('shout') || textLower.includes('tap');
+        if (c.key === 'safe') return textLower.includes('safe') || textLower.includes('clear') || textLower.includes('danger') || textLower.includes('hazard');
+        if (c.key === 'time') return textLower.includes('time') || textLower.includes('clock') || textLower.includes('watch') || textLower.includes('minute');
+        if (c.key === 'recovery') return textLower.includes('recovery') || textLower.includes('side') || textLower.includes('lie') || textLower.includes('position');
+        if (c.key === 'epipen') return textLower.includes('epipen') || textLower.includes('epi') || textLower.includes('inject') || textLower.includes('needle');
+        if (c.key === 'bandage') return textLower.includes('bandage') || textLower.includes('wrap') || textLower.includes('cover');
+        if (c.key === 'avoid') return textLower.includes('avoid') || textLower.includes('warning') || textLower.includes('never') || textLower.includes('donot') || textLower.includes('no');
+        return false;
+      });
+
+      const displayList = matches.length > 0 ? matches : directConcepts.slice(0, 4);
+
+      let html = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; background:rgba(0,0,0,0.25); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); text-align:left;">';
+      html += `<div style="font-size:0.68rem; color:#8492a6; font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.05em;">${matches.length > 0 ? 'Gestures in this Step:' : 'Core Emergency Gestures:'}</div>`;
+      displayList.forEach(c => {
+        html += `
+          <div style="display:flex; gap:8px; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 10px;">
+            <div style="font-size:0.85rem; color:#eab308; font-weight:800; min-width:80px;">${c.title}</div>
+            <div style="font-size:0.75rem; color:#cbd5e1; flex:1;">${c.desc}</div>
+          </div>
+        `;
+      });
       html += '</div>';
       return html;
     }
@@ -3176,18 +3264,59 @@
         `;
         bubble.appendChild(signCard);
 
-        // Also append the fingerspelled spelling of the text!
+        // Also append the concepts signed in the text
         const cleanMsgText = html.replace(/<[^>]+>/g, '').trim();
         if (cleanMsgText.length > 0) {
-          const fsCard = document.createElement('div');
-          fsCard.style.cssText = 'margin-top:8px; padding:8px; background:rgba(234,179,8,0.04); border:1px solid rgba(234,179,8,0.15); border-radius:10px; text-align:left;';
-          fsCard.innerHTML = `
-            <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase; font-weight:800; letter-spacing:0.08em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-              <i class="fa-solid fa-hands-asl-interpreting" style="color:#eab308;"></i> ASL Spelling
-            </div>
-            ${getAslFingerspellingHtml(cleanMsgText)}
-          `;
-          bubble.appendChild(fsCard);
+          const textLower = cleanMsgText.toLowerCase();
+          const directConcepts = [
+            { key: 'cpr', label: 'CPR' },
+            { key: 'call', label: 'CALL 911' },
+            { key: 'bleeding', label: 'BLEEDING' },
+            { key: 'pain', label: 'PAIN' },
+            { key: 'choke', label: 'CHOKING' },
+            { key: 'water', label: 'COOL WATER' },
+            { key: 'elevate', label: 'ELEVATE' },
+            { key: 'breath', label: 'BREATHE' },
+            { key: 'check', label: 'CHECK RESPONSE' },
+            { key: 'safe', label: 'SAFE AREA' },
+            { key: 'time', label: 'TIME' },
+            { key: 'recovery', label: 'RECOVERY' },
+            { key: 'epipen', label: 'EPIPEN' },
+            { key: 'bandage', label: 'BANDAGE' },
+            { key: 'avoid', label: 'AVOID' }
+          ];
+
+          const matches = directConcepts.filter(c => {
+            if (c.key === 'cpr') return textLower.includes('cpr') || textLower.includes('compress');
+            if (c.key === 'call') return textLower.includes('call') || textLower.includes('911') || textLower.includes('phone') || textLower.includes('emergency');
+            if (c.key === 'bleeding') return textLower.includes('bleed') || textLower.includes('blood') || textLower.includes('pressure') || textLower.includes('wound');
+            if (c.key === 'pain') return textLower.includes('pain') || textLower.includes('hurt') || textLower.includes('ache');
+            if (c.key === 'choke') return textLower.includes('chok') || textLower.includes('blockage') || textLower.includes('airway') || textLower.includes('thrust') || textLower.includes('heimlich');
+            if (c.key === 'water') return textLower.includes('water') || textLower.includes('cool') || textLower.includes('burn') || textLower.includes('rinse');
+            if (c.key === 'elevate') return textLower.includes('elevate') || textLower.includes('raise') || textLower.includes('high');
+            if (c.key === 'breath') return textLower.includes('breath') || textLower.includes('breathe') || textLower.includes('mouth');
+            if (c.key === 'check') return textLower.includes('check') || textLower.includes('response') || textLower.includes('shout') || textLower.includes('tap');
+            if (c.key === 'safe') return textLower.includes('safe') || textLower.includes('clear') || textLower.includes('danger') || textLower.includes('hazard');
+            if (c.key === 'time') return textLower.includes('time') || textLower.includes('clock') || textLower.includes('watch') || textLower.includes('minute');
+            if (c.key === 'recovery') return textLower.includes('recovery') || textLower.includes('side') || textLower.includes('lie') || textLower.includes('position');
+            if (c.key === 'epipen') return textLower.includes('epipen') || textLower.includes('epi') || textLower.includes('inject') || textLower.includes('needle');
+            if (c.key === 'bandage') return textLower.includes('bandage') || textLower.includes('wrap') || textLower.includes('cover');
+            if (c.key === 'avoid') return textLower.includes('avoid') || textLower.includes('warning') || textLower.includes('never') || textLower.includes('donot') || textLower.includes('no');
+            return false;
+          });
+
+          if (matches.length > 0) {
+            const fsCard = document.createElement('div');
+            fsCard.style.cssText = 'margin-top:8px; padding:8px; background:rgba(234,179,8,0.04); border:1px solid rgba(234,179,8,0.15); border-radius:10px; text-align:left;';
+            let badgesHtml = matches.map(m => `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-size:0.68rem; font-weight:800; padding:2px 6px; border-radius:4px; margin-right:4px; display:inline-block; margin-bottom:4px;">${m.label}</span>`).join('');
+            fsCard.innerHTML = `
+              <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase; font-weight:800; letter-spacing:0.08em; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                <i class="fa-solid fa-hands-asl-interpreting" style="color:#eab308;"></i> ASL Concepts Signed
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:4px;">${badgesHtml}</div>
+            `;
+            bubble.appendChild(fsCard);
+          }
         }
       }
 
