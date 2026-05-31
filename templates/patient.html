@@ -1400,6 +1400,19 @@
         this.currentGesture = null;
         this.gestureTick = 0;
 
+        this.aslGiphyMap = {
+          'cpr': 'https://media.giphy.com/media/3o7TKHaFHRVMUWCjrW/giphy.gif',
+          'help': 'https://media.giphy.com/media/3o7TKW6H1vS4vKxKHC/giphy.gif',
+          'bleeding': 'https://media.giphy.com/media/xT9IgEwJ19aC493s12/giphy.gif',
+          'pain': 'https://media.giphy.com/media/3o7TKMGpxxHOGTdzJC/giphy.gif',
+          'call': 'https://media.giphy.com/media/xT9IgGL3q5K12GqXle/giphy.gif',
+          'choke': 'https://media.giphy.com/media/3o7TKD60p91V3885dK/giphy.gif',
+          'water': 'https://media.giphy.com/media/l41lTjJp7HzY7G2C4/giphy.gif',
+          'breath': 'https://media.giphy.com/media/l4JyYk4iH6lI4z2p2/giphy.gif',
+          'avoid': 'https://media.giphy.com/media/3oz8xzEzHpLdOFt5fy/giphy.gif'
+        };
+        this.isDrawingCanvas = true;
+
         this.running = true;
         this.tick = 0;
         this.loop();
@@ -1569,10 +1582,20 @@
         
         const bgImg = document.getElementById('avatar-bg');
         if (bgImg) {
-          if (this.currentGesture && this.currentGesture !== 'idle') {
-            bgImg.classList.add('is-signing');
-          } else {
+          if (this.aslGiphyMap[this.currentGesture]) {
+            bgImg.src = this.aslGiphyMap[this.currentGesture];
+            bgImg.classList.remove('avatar-bg-img'); // stop breathing animation during video
             bgImg.classList.remove('is-signing');
+            this.isDrawingCanvas = false;
+          } else {
+            bgImg.src = "/static/img/realistic_female_nurse.png";
+            bgImg.classList.add('avatar-bg-img'); // restore breathing animation
+            if (this.currentGesture && this.currentGesture !== 'idle') {
+              bgImg.classList.add('is-signing');
+            } else {
+              bgImg.classList.remove('is-signing');
+            }
+            this.isDrawingCanvas = true;
           }
         }
       }
@@ -1681,6 +1704,7 @@
 
       draw() {
         this.ctx.clearRect(0, 0, this.width, this.height);
+        if (!this.isDrawingCanvas) return;
 
         // Apply realistic drop-shadow parameters to the canvas drawings
         this.ctx.shadowColor = 'rgba(15, 23, 42, 0.45)';
